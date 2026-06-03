@@ -2,9 +2,21 @@
 
 from __future__ import annotations
 
+from core.deprecate import deprecate
 from core.ingest import ingest_folder
 from core.query import retrieve
+from core.schema import STATUS_ACTIVE, STATUS_FLAGGED
 from core.store import Store
+
+
+def _folder_with(tmp_path, name, *capabilities):
+    """Folder with a README whose 'What It Does' bullets become per-bullet claims."""
+    d = tmp_path / name
+    d.mkdir()
+    caps = "\n".join(f"- {c}" for c in capabilities)
+    (d / "README.md").write_text(
+        f"# {name}\n\n> generated source\n\n## What It Does\n\n{caps}\n", encoding="utf-8")
+    return d
 
 
 def test_detects_tools_from_extensions(synthetic_folder, optimus_root):
@@ -64,6 +76,25 @@ def test_folder_pages_are_queryable(synthetic_folder, optimus_root):
     with Store(optimus_root) as store:
         ingest_folder(store, str(synthetic_folder))
         assert retrieve(store, "my-art").top.page_id == "my-art-overview"
+
+
+def test_folder_channel_respects_tombstones(tmp_path, optimus_root):
+    """The hole check: a tombstoned entity must NOT silently revive via the folder
+    channel — it routes through the same _flag_tombstoned guard as git."""
+    with Store(optimus_root) as store:
+        ingest_folder(store, str(_folder_with(tmp_path, "src-a", "The buzzer alerts on crash.")),
+                      project="src-a")
+        assert any("buzzer" in c.text.lower() for c in store.all_claims(status=STATUS_ACTIVE))
+
+        deprecate(store, "buzzer", reason="removed from hardware", date="2026-06-03", confirm=None)
+
+        # A new folder source repeating the stale fact must come back flagged.
+        result = ingest_folder(
+            store, str(_folder_with(tmp_path, "src-b", "The buzzer still beeps here.")),
+            project="src-b")
+        assert result.flagged_claims, "folder channel must flag tombstoned mentions"
+        assert not any("buzzer" in c.text.lower() for c in store.all_claims(status=STATUS_ACTIVE))
+        assert any("buzzer" in c.text.lower() for c in store.all_claims(status=STATUS_FLAGGED))
 
 
 def test_rejects_non_folder(tmp_path, optimus_root):

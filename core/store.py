@@ -180,6 +180,17 @@ class Store:
             "SELECT * FROM pages WHERE project = ? ORDER BY type, id", (project,)
         ).fetchall()
 
+    def all_pages(self) -> list[sqlite3.Row]:
+        return self._conn.execute(
+            "SELECT id, title, tier, type, project, path, status FROM pages "
+            "WHERE status = 'active' ORDER BY id"
+        ).fetchall()
+
+    def all_aliases(self) -> list[sqlite3.Row]:
+        return self._conn.execute(
+            "SELECT alias, page_id, canonical FROM aliases"
+        ).fetchall()
+
     def resolve_alias(self, alias: str) -> list[str]:
         """Alias (case-insensitive) → list of page ids."""
         rows = self._conn.execute(

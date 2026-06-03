@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 from core.ingest import ingest_git
+from core.query import format_answer, retrieve
 from core.store import Store
 
 
@@ -30,7 +31,16 @@ def cmd_ingest(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_query(args: argparse.Namespace) -> int:
+    with Store(args.root) as store:
+        result = retrieve(store, args.text, k=args.k)
+        print(format_answer(store, result))
+    return 0 if result.pages else 1
+
+
 def main(argv: list[str] | None = None) -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")  # Windows consoles default to cp1252
     parser = argparse.ArgumentParser(prog="optimus", description="Optimus memory engine")
     parser.add_argument("--root", default=str(Path(__file__).parent),
                         help="Optimus repo root (default: this directory)")
@@ -40,6 +50,11 @@ def main(argv: list[str] | None = None) -> int:
     p_ingest.add_argument("--git", metavar="SRC", help="git repo: local path or remote URL")
     p_ingest.add_argument("--project", metavar="SLUG", help="override project slug")
     p_ingest.set_defaults(func=cmd_ingest)
+
+    p_query = sub.add_parser("query", help="retrieve brain pages for a question (LLM-free)")
+    p_query.add_argument("text", help="the question, e.g. \"what is Aegis\"")
+    p_query.add_argument("-k", type=int, default=3, help="max pages to return (default 3)")
+    p_query.set_defaults(func=cmd_query)
 
     args = parser.parse_args(argv)
     return args.func(args)

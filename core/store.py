@@ -15,6 +15,7 @@ Conversation memory lives under brain/conversations/ regardless of tier.
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from pathlib import Path
 
@@ -138,10 +139,7 @@ class Store:
             )
         self._conn.commit()
 
-    def claims_for(self, page_id: str) -> list[Claim]:
-        rows = self._conn.execute(
-            "SELECT * FROM claims WHERE page_id = ? ORDER BY id", (page_id,)
-        ).fetchall()
+    def _claims_from_rows(self, rows) -> list[Claim]:
         return [
             Claim(
                 id=r["id"], page_id=r["page_id"], text=r["text"], source=r["source"],
@@ -149,6 +147,34 @@ class Store:
             )
             for r in rows
         ]
+
+    def claims_for(self, page_id: str, status: str | None = None) -> list[Claim]:
+        if status is None:
+            rows = self._conn.execute(
+                "SELECT * FROM claims WHERE page_id = ? ORDER BY id", (page_id,)
+            ).fetchall()
+        else:
+            rows = self._conn.execute(
+                "SELECT * FROM claims WHERE page_id = ? AND status = ? ORDER BY id",
+                (page_id, status),
+            ).fetchall()
+        return self._claims_from_rows(rows)
+
+    def all_claims(self, status: str | None = None) -> list[Claim]:
+        if status is None:
+            rows = self._conn.execute("SELECT * FROM claims ORDER BY id").fetchall()
+        else:
+            rows = self._conn.execute(
+                "SELECT * FROM claims WHERE status = ? ORDER BY id", (status,)
+            ).fetchall()
+        return self._claims_from_rows(rows)
+
+    def set_claim_status(self, claim_ids: list[str], status: str) -> None:
+        for cid in claim_ids:
+            self._conn.execute(
+                "UPDATE claims SET status = ? WHERE id = ?", (status, cid)
+            )
+        self._conn.commit()
 
     # -- edges -------------------------------------------------------------- #
     def add_edge(self, src_page_id: str, dst_page_id: str, rel: str) -> None:
@@ -166,6 +192,79 @@ class Store:
             (utcnow_iso(), op, target, json.dumps(detail or {})),
         )
         self._conn.commit()
+
+    # -- tombstones (dead facts; block silent re-ingestion, CLAUDE.md §4.5) -- #
+    def path_of(self, page_id: str) -> Path | None:
+        row = self._conn.execute(
+            "SELECT path FROM pages WHERE id = ?", (page_id,)
+        ).fetchone()
+        return (self.root / row["path"]) if row else None
+
+    def write_tombstone(
+        self, entity: str, aliases: list[str], reason: str,
+        pages: list[str], created: str, source: str | None = None,
+    ) -> None:
+        slug = re.sub(r"[^a-z0-9]+", "-", entity.lower()).strip("-")
+        self._conn.execute(
+            """
+            INSERT INTO tombstones (id, entity, canonical_alias, aliases, pages,
+                                    reason, source, created)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                entity=excluded.entity, canonical_alias=excluded.canonical_alias,
+                aliases=excluded.aliases, pages=excluded.pages, reason=excluded.reason,
+                source=excluded.source, created=excluded.created
+            """,
+            (slug, entity, entity, json.dumps(sorted(set(aliases))),
+             json.dumps(pages), reason, source, created),
+        )
+        self._conn.commit()
+        self._rewrite_tombstones_md()
+
+    def remove_tombstone(self, entity: str) -> None:
+        slug = re.sub(r"[^a-z0-9]+", "-", entity.lower()).strip("-")
+        self._conn.execute("DELETE FROM tombstones WHERE id = ?", (slug,))
+        self._conn.commit()
+        self._rewrite_tombstones_md()
+
+    def list_tombstones(self) -> list[dict]:
+        rows = self._conn.execute(
+            "SELECT * FROM tombstones ORDER BY id"
+        ).fetchall()
+        return [
+            {
+                "id": r["id"], "entity": r["entity"], "reason": r["reason"],
+                "aliases": json.loads(r["aliases"]), "pages": json.loads(r["pages"]),
+                "created": r["created"],
+            }
+            for r in rows
+        ]
+
+    def tombstoned_aliases(self) -> dict[str, str]:
+        """alias (lowercased) → canonical entity, across all tombstones."""
+        out: dict[str, str] = {}
+        for t in self.list_tombstones():
+            for a in t["aliases"]:
+                out[a.lower()] = t["entity"]
+        return out
+
+    def _rewrite_tombstones_md(self) -> None:
+        """Regenerate brain/tombstones.md from the table (markdown is the export)."""
+        lines = [
+            "# Tombstones", "",
+            "Dead facts. Each blocks silent re-ingestion of the entity "
+            "(CLAUDE.md §4.5 `deprecate`).", "",
+        ]
+        for t in self.list_tombstones():
+            lines += [
+                f"## {t['entity']}", "",
+                f"- deprecated: {t['created']}",
+                f"- reason: {t['reason']}",
+                f"- aliases: {', '.join(t['aliases'])}",
+                f"- pages: {', '.join(t['pages']) or '(none)'}",
+                "",
+            ]
+        (self.brain / "tombstones.md").write_text("\n".join(lines), encoding="utf-8")
 
     # -- queries used by tests / reporting ---------------------------------- #
     def page_count(self, project: str | None = None) -> int:
@@ -216,6 +315,8 @@ class Store:
         self._conn.execute("DELETE FROM pages")
         count = 0
         for md in sorted(self.brain.rglob("*.md")):
+            if md.name == "tombstones.md":          # index artifact, not a brain page
+                continue
             page = Page.from_markdown(md.read_text(encoding="utf-8"))
             self._index_page(page, md)
             count += 1

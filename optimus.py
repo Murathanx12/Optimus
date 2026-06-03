@@ -14,6 +14,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from core.deprecate import deprecate as run_deprecate
 from core.ingest import ingest_git
 from core.query import format_answer, retrieve
 from core.store import Store
@@ -38,6 +39,38 @@ def cmd_query(args: argparse.Namespace) -> int:
     return 0 if result.pages else 1
 
 
+def cmd_deprecate(args: argparse.Namespace) -> int:
+    def _show(refset, diffs) -> None:
+        print(refset.preview())
+        print("\nStaged diffs (not yet applied):")
+        for diff in diffs.values():
+            print(diff)
+            print()
+
+    def confirm(refset, diffs) -> bool:
+        _show(refset, diffs)
+        while True:
+            ans = input("Apply deprecation? [y/N/review]: ").strip().lower()
+            if ans in ("y", "yes"):
+                return True
+            if ans in ("r", "review"):
+                _show(refset, diffs)
+                continue
+            return False
+
+    with Store(args.root) as store:
+        result = run_deprecate(
+            store, args.entity, reason=args.reason,
+            extra_aliases=tuple(args.alias or ()),
+            dry_run=args.dry_run,
+            confirm=None if args.yes else confirm,
+        )
+    if args.dry_run or args.yes or not result.applied:
+        print(result.refset.preview())
+    print(f"\n{'APPLIED' if result.applied else 'NOT APPLIED'}: {result.note}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")  # Windows consoles default to cp1252
@@ -55,6 +88,14 @@ def main(argv: list[str] | None = None) -> int:
     p_query.add_argument("text", help="the question, e.g. \"what is Aegis\"")
     p_query.add_argument("-k", type=int, default=3, help="max pages to return (default 3)")
     p_query.set_defaults(func=cmd_query)
+
+    p_dep = sub.add_parser("deprecate", help="deprecate an entity across every reference")
+    p_dep.add_argument("entity", help="entity to deprecate, e.g. \"buzzer\"")
+    p_dep.add_argument("--reason", required=True, help="why / when it was removed")
+    p_dep.add_argument("--alias", action="append", help="extra alias to match (repeatable)")
+    p_dep.add_argument("--yes", action="store_true", help="skip the confirm prompt")
+    p_dep.add_argument("--dry-run", action="store_true", help="preview references only, no changes")
+    p_dep.set_defaults(func=cmd_deprecate)
 
     args = parser.parse_args(argv)
     return args.func(args)

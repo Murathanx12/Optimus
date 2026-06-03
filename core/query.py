@@ -129,7 +129,7 @@ def retrieve(store: Store, query: str, k: int = 3) -> QueryResult:
             score += 15
 
         title_l = r["title"].lower()
-        claims = store.claims_for(r["id"])
+        claims = store.claims_for(r["id"], status="active")  # deprecated claims have weight 0
         claim_blob = " ".join(c.text.lower() for c in claims)
         for term in content_terms:
             if term in title_l:

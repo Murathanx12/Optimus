@@ -176,7 +176,7 @@ def _split_front_matter(text: str) -> tuple[dict[str, Any], str]:
 # --------------------------------------------------------------------------- #
 # SQLite DDL — the six derived tables (CLAUDE.md §7 Session 1, task 1)
 # --------------------------------------------------------------------------- #
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 DDL = """
 CREATE TABLE IF NOT EXISTS pages (
@@ -218,9 +218,11 @@ CREATE TABLE IF NOT EXISTS claims (
 );
 
 CREATE TABLE IF NOT EXISTS tombstones (
-    id              TEXT PRIMARY KEY,
+    id              TEXT PRIMARY KEY,      -- slug of the canonical entity
     entity          TEXT NOT NULL,         -- canonical entity name
     canonical_alias TEXT,
+    aliases         TEXT NOT NULL DEFAULT '[]',  -- JSON list of all aliases (re-ingest block)
+    pages           TEXT NOT NULL DEFAULT '[]',  -- JSON list of pages touched at deprecation
     reason          TEXT NOT NULL,
     source          TEXT,
     created         TEXT NOT NULL

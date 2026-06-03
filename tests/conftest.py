@@ -69,6 +69,34 @@ def synthetic_repo(tmp_path: Path) -> Path:
     return repo
 
 
+_BUZZER_README = """# Artooth
+
+> The mecanum robotic butler.
+
+## What It Does
+
+- **Buzzer** — alerts the operator on crash detection.
+- **Wheel encoder** — reports odometry to the controller.
+"""
+
+
+@pytest.fixture
+def buzzer_repo(tmp_path: Path) -> Path:
+    """A git repo whose README capability list mentions the buzzer — for the
+    tombstone-aware-ingest (step 4) tests."""
+    repo = tmp_path / "artooth"
+    repo.mkdir()
+    _run(repo, "init", "-q")
+    _run(repo, "config", "user.email", "test@example.com")
+    _run(repo, "config", "user.name", "Test Runner")
+    _run(repo, "config", "commit.gpgsign", "false")
+    (repo / "README.md").write_text(_BUZZER_README, encoding="utf-8")
+    (repo / "main.py").write_text("def run():\n    return 1\n", encoding="utf-8")
+    _run(repo, "add", "-A")
+    _run(repo, "commit", "-q", "-m", "initial: artooth")
+    return repo
+
+
 @pytest.fixture
 def optimus_root(tmp_path: Path) -> Path:
     """An isolated Optimus root (brain/ + index.db created on demand)."""

@@ -34,8 +34,10 @@ class Tier(IntEnum):
 # Page status values.
 STATUS_ACTIVE = "active"
 STATUS_DEPRECATED = "deprecated"
+STATUS_FLAGGED = "flagged"   # ingested, but matches a tombstone — held for resolution
 
 # Front-matter key order, fixed so serialization is deterministic and diffs stay clean.
+# `claims` is last (it's the largest block).
 _FRONTMATTER_ORDER = (
     "id",
     "title",
@@ -48,6 +50,7 @@ _FRONTMATTER_ORDER = (
     "status",
     "created",
     "updated",
+    "claims",
 )
 
 
@@ -82,6 +85,7 @@ class Page:
     status: str = STATUS_ACTIVE
     created: str = field(default_factory=utcnow_iso)
     updated: str = field(default_factory=utcnow_iso)
+    claims: list["Claim"] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         # Dedup aliases case-insensitively, order-preserving (keep first casing).
@@ -108,6 +112,14 @@ class Page:
             "status": self.status,
             "created": self.created,
             "updated": self.updated,
+            # Claims (+ their status) live in markdown so reindex() can rebuild
+            # them — including deprecation state, which exists in no source.
+            # tier/page_id/created are derived from the page on load, so they
+            # aren't persisted here.
+            "claims": [
+                {"id": c.id, "text": c.text, "source": c.source, "status": c.status}
+                for c in self.claims
+            ],
         }
         return {k: raw[k] for k in _FRONTMATTER_ORDER}
 
@@ -124,10 +136,20 @@ class Page:
     @classmethod
     def from_markdown(cls, text: str) -> "Page":
         fm, body = _split_front_matter(text)
+        pid = fm["id"]
+        tier = int(fm["tier"])
+        created = fm.get("created", utcnow_iso())
+        claims = [
+            Claim(
+                id=c["id"], page_id=pid, text=c["text"], source=c["source"],
+                tier=tier, status=c.get("status", STATUS_ACTIVE), created=created,
+            )
+            for c in (fm.get("claims") or [])
+        ]
         return cls(
-            id=fm["id"],
+            id=pid,
             title=fm["title"],
-            tier=int(fm["tier"]),
+            tier=tier,
             type=fm["type"],
             body=body,
             project=fm.get("project"),
@@ -135,8 +157,9 @@ class Page:
             tags=list(fm.get("tags") or []),
             sources=list(fm.get("sources") or []),
             status=fm.get("status", STATUS_ACTIVE),
-            created=fm.get("created", utcnow_iso()),
+            created=created,
             updated=fm.get("updated", utcnow_iso()),
+            claims=claims,
         )
 
     @property

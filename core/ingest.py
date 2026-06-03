@@ -27,7 +27,8 @@ from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .schema import Claim, Page, Tier
+from .deprecate import alias_pattern
+from .schema import STATUS_FLAGGED, Claim, Page, Tier
 from .store import Store
 
 # Files worth turning into provenance-bearing prose. Everything else counts
@@ -75,11 +76,13 @@ class IngestResult:
     file_count: int = 0
     commit_count: int = 0
     skipped_untracked: bool = True                      # we read tracked files only
+    flagged_claims: list[str] = field(default_factory=list)  # matched a tombstone (step 4)
 
     def summary(self) -> str:
+        flagged = f" flagged={len(self.flagged_claims)}" if self.flagged_claims else ""
         return (
             f"project={self.project} sha={self.sha[:7]} pages={len(self.pages)} "
-            f"claims={self.claim_count} files={self.file_count} commits={self.commit_count}"
+            f"claims={self.claim_count} files={self.file_count} commits={self.commit_count}{flagged}"
         )
 
 
@@ -337,9 +340,15 @@ def ingest_git(store: Store, source: str, project: str | None = None) -> IngestR
     structure = _build_structure(slug, repo_name, display_name, sha, files)
     history, commit_count = _build_history(slug, repo_name, display_name, sha, repo)
 
+    # Step 4 — tombstone-aware ingest: a claim mentioning a tombstoned entity is
+    # held in `flagged` (not active, not silently revived) for human/LLM
+    # resolution. The rest of the source ingests normally. We never auto-classify
+    # removal-vs-stale intent — that's deferred to the LLM/human layer.
+    flagged = _flag_tombstoned(store, claims)
+    overview.claims = claims                      # claims live on the page (front-matter)
+
     for page in (overview, structure, history):
         store.write_page(page)
-    store.write_claims(claims)
 
     # Typed edges: structure and history are part_of the overview.
     store.add_edge(structure.id, overview.id, "part_of")
@@ -352,6 +361,7 @@ def ingest_git(store: Store, source: str, project: str | None = None) -> IngestR
         claim_count=len(claims),
         file_count=len(files),
         commit_count=commit_count,
+        flagged_claims=flagged,
     )
     store.log_event(
         "ingest",
@@ -364,6 +374,21 @@ def ingest_git(store: Store, source: str, project: str | None = None) -> IngestR
             "claims": result.claim_count,
             "files": result.file_count,
             "commits": result.commit_count,
+            "flagged": flagged,
         },
     )
     return result
+
+
+def _flag_tombstoned(store: Store, claims: list[Claim]) -> list[str]:
+    """Mark any claim mentioning a tombstoned alias as `flagged`; return their ids."""
+    tomb = store.tombstoned_aliases()             # alias(lower) → canonical entity
+    if not tomb:
+        return []
+    pattern = alias_pattern(list(tomb.keys()))
+    flagged: list[str] = []
+    for c in claims:
+        if pattern.search(c.text):
+            c.status = STATUS_FLAGGED
+            flagged.append(c.id)
+    return flagged

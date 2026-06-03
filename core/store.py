@@ -123,22 +123,18 @@ class Store:
                 "INSERT OR IGNORE INTO aliases (alias, page_id, canonical) VALUES (?, ?, ?)",
                 (alias, page.id, 1 if i == 0 else 0),
             )
-
-    # -- claims ------------------------------------------------------------- #
-    def write_claims(self, claims: list[Claim]) -> None:
-        for c in claims:
+        # Claims: refresh from the page's front-matter (markdown is source of truth).
+        # This runs in both write_page and reindex, so the index — including claim
+        # deprecation status — is always rebuildable from the .md alone.
+        self._conn.execute("DELETE FROM claims WHERE page_id = ?", (page.id,))
+        for c in page.claims:
             self._conn.execute(
-                """
-                INSERT INTO claims (id, page_id, text, source, tier, status, created)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET
-                    text=excluded.text, source=excluded.source, tier=excluded.tier,
-                    status=excluded.status
-                """,
-                (c.id, c.page_id, c.text, c.source, int(c.tier), c.status, c.created),
+                "INSERT INTO claims (id, page_id, text, source, tier, status, created) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (c.id, page.id, c.text, c.source, int(c.tier), c.status, c.created),
             )
-        self._conn.commit()
 
+    # -- claims (read-only; writes go through pages, never the index directly) #
     def _claims_from_rows(self, rows) -> list[Claim]:
         return [
             Claim(
@@ -168,13 +164,6 @@ class Store:
                 "SELECT * FROM claims WHERE status = ? ORDER BY id", (status,)
             ).fetchall()
         return self._claims_from_rows(rows)
-
-    def set_claim_status(self, claim_ids: list[str], status: str) -> None:
-        for cid in claim_ids:
-            self._conn.execute(
-                "UPDATE claims SET status = ? WHERE id = ?", (status, cid)
-            )
-        self._conn.commit()
 
     # -- edges -------------------------------------------------------------- #
     def add_edge(self, src_page_id: str, dst_page_id: str, rel: str) -> None:

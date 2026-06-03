@@ -78,7 +78,7 @@ def _today() -> str:
     return datetime.now().strftime("%Y-%m-%d")
 
 
-def _alias_pattern(aliases: list[str]) -> re.Pattern:
+def alias_pattern(aliases: list[str]) -> re.Pattern:
     # Longest-first so multi-word aliases win; whole-token match to avoid substrings.
     parts = sorted({re.escape(a.strip()) for a in aliases if a.strip()}, key=len, reverse=True)
     return re.compile(r"(?<!\w)(?:" + "|".join(parts) + r")(?!\w)", re.IGNORECASE)
@@ -99,7 +99,15 @@ def find_references(store: Store, entity: str, extra_aliases: tuple[str, ...] = 
     for row in store.all_aliases():
         if row["page_id"] in entity_pages:
             aliases.add(row["alias"])
-    pattern = _alias_pattern(sorted(aliases))
+    pattern = alias_pattern(sorted(aliases))
+
+    # Claims whose text mentions an alias (and the pages that hold them).
+    claim_matches = [
+        (c.id, c.page_id) for c in store.all_claims(status=STATUS_ACTIVE)
+        if pattern.search(c.text)
+    ]
+    claim_ids = [cid for cid, _ in claim_matches]
+    claim_pages = {pid for _, pid in claim_matches}
 
     page_refs: list[PageRef] = []
     for prow in store.all_pages():                      # active pages only
@@ -111,10 +119,11 @@ def find_references(store: Store, entity: str, extra_aliases: tuple[str, ...] = 
             if pattern.search(ln)
         ]
         is_entity = prow["id"] in entity_pages
-        if matched or is_entity:
+        # Include a page if its body mentions the entity, it IS the entity, or it
+        # holds a matching claim (so a claim with no body line still gets deprecated).
+        if matched or is_entity or prow["id"] in claim_pages:
             page_refs.append(PageRef(prow["id"], matched, is_entity))
 
-    claim_ids = [c.id for c in store.all_claims(status=STATUS_ACTIVE) if pattern.search(c.text)]
     return ReferenceSet(entity=entity, aliases=sorted(aliases),
                         page_refs=page_refs, claim_ids=claim_ids)
 
@@ -135,30 +144,33 @@ def stage_diffs(store: Store, refset: ReferenceSet, reason: str, date: str) -> d
 
 
 def _apply(store: Store, refset: ReferenceSet, reason: str, date: str) -> None:
-    """Atomic apply: strike markdown, deprecate claims + entity pages, tombstone.
-    Snapshots originals and restores all of them if any step raises."""
+    """Atomic apply: strike body lines, deprecate matching claims + entity pages,
+    write a tombstone. Claim status is edited on the page and persisted via
+    write_page, so it lands in markdown. Snapshots each page's markdown and
+    restores it if any step raises (claims ride with the page — no special-casing)."""
     note = f"(deprecated {date}: {reason})"
+    claim_ids = set(refset.claim_ids)
     md_snapshots: dict[str, str] = {}
-    claim_snapshots = {c.id: c.status for c in store.all_claims() if c.id in set(refset.claim_ids)}
 
     try:
         for pr in refset.page_refs:
             page = store.read_page(pr.page_id)
             md_snapshots[pr.page_id] = page.to_markdown()
+
             matched_nos = {ln for ln, _ in pr.matched_lines}
-            new_lines = []
-            for i, line in enumerate(page.body.splitlines(), start=1):
-                if i in matched_nos and line.strip() and "~~" not in line:
-                    new_lines.append(_strike(line, note))
-                else:
-                    new_lines.append(line)
-            page.body = "\n".join(new_lines)
+            page.body = "\n".join(
+                _strike(line, note) if (i in matched_nos and line.strip() and "~~" not in line)
+                else line
+                for i, line in enumerate(page.body.splitlines(), start=1)
+            )
+            for c in page.claims:                       # deprecate matching claims in front-matter
+                if c.id in claim_ids:
+                    c.status = STATUS_DEPRECATED
             page.updated = utcnow_iso()
             if pr.is_entity_page:
                 page.status = STATUS_DEPRECATED
-            store.write_page(page)
+            store.write_page(page)                      # md + index, claims included
 
-        store.set_claim_status(refset.claim_ids, STATUS_DEPRECATED)
         store.write_tombstone(
             entity=refset.entity, aliases=refset.aliases, reason=reason,
             pages=[pr.page_id for pr in refset.page_refs], created=date,
@@ -168,14 +180,10 @@ def _apply(store: Store, refset: ReferenceSet, reason: str, date: str) -> None:
             "claims": refset.claim_ids, "lines": refset.line_count,
         })
     except Exception:
-        # Roll back. Restore each page via write_page (upserts md + its index row);
-        # do NOT call reindex() here — its DELETE FROM pages cascades and wipes the
-        # claims table (claims aren't yet persisted in markdown). Restore claim
-        # statuses and remove the tombstone.
+        # Roll back: restore each page's markdown via write_page. Claims and their
+        # status are inside that markdown now, so this restores them too.
         for pid, md in md_snapshots.items():
             store.write_page(Page.from_markdown(md))
-        for cid, status in claim_snapshots.items():
-            store.set_claim_status([cid], status)
         store.remove_tombstone(refset.entity)
         raise
 

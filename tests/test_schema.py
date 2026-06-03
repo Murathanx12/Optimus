@@ -81,14 +81,33 @@ def test_aliases_resolve_case_insensitively(optimus_root):
 
 def test_claims_carry_provenance(optimus_root):
     with Store(optimus_root) as store:
-        store.write_page(Page(id="p", title="P", tier=2, type="overview", project="demo", body="x"))
-        store.write_claims([
-            Claim(id="c1", page_id="p", text="does the thing",
-                  source="git:demo@abc1234:README.md#L12-L12", tier=2),
-        ])
+        store.write_page(Page(
+            id="p", title="P", tier=2, type="overview", project="demo", body="x",
+            claims=[Claim(id="c1", page_id="p", text="does the thing",
+                          source="git:demo@abc1234:README.md#L12-L12", tier=2)],
+        ))
         claims = store.claims_for("p")
         assert len(claims) == 1
         assert claims[0].source.startswith("git:demo@")
+
+
+def test_claims_roundtrip_through_markdown_with_status():
+    """Claims + their status persist in front-matter (the portability fix)."""
+    page = Page(
+        id="p", title="P", tier=2, type="overview", project="demo", body="x",
+        claims=[
+            Claim(id="c1", page_id="p", text="active fact",
+                  source="git:demo@abc1234:README.md#L1-L1", tier=2),
+            Claim(id="c2", page_id="p", text="dead fact",
+                  source="git:demo@abc1234:README.md#L2-L2", tier=2, status="deprecated"),
+        ],
+    )
+    back = Page.from_markdown(page.to_markdown())
+    assert [(c.id, c.text, c.source, c.status) for c in back.claims] == [
+        ("c1", "active fact", "git:demo@abc1234:README.md#L1-L1", "active"),
+        ("c2", "dead fact", "git:demo@abc1234:README.md#L2-L2", "deprecated"),
+    ]
+    assert all(c.page_id == "p" and c.tier == 2 for c in back.claims)  # derived from page
 
 
 def test_reindex_rebuilds_from_markdown(optimus_root):

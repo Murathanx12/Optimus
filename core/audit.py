@@ -133,21 +133,31 @@ def audit(store: Store) -> AuditReport:
                 claim.id, claim.page_id, claim.source, "source-root-unknown",
                 "no ingest event records the source path for this project"))
             continue
+        # Decision-claims are verified against their verbatim QUOTE (the rationale
+        # is for human grading — deterministic audit can't check a reading's truth).
+        # Widen the read window so a multi-line quote starting at the cited line still
+        # verifies.
+        a, b = span.a, span.b
+        target = claim.text
+        if claim.kind == "decision":
+            target = claim.quote or claim.text
+            b = max(b, a + 4)
         if span.channel == "git":
-            lines = _read_git_span(root, span.sha, span.path, span.a, span.b)
+            lines = _read_git_span(root, span.sha, span.path, a, b)
         else:
-            lines = _read_file_span(root, span.path, span.a, span.b)
+            lines = _read_file_span(root, span.path, a, b)
         if lines is None:
             report.findings.append(AuditFinding(
                 claim.id, claim.page_id, claim.source, "source-unreadable",
                 "cited file / sha / line-range not found at the source"))
             continue
-        if _supported(claim.text, lines, span.path):
+        if _supported(target, lines, span.path):
             report.ok += 1
         else:
+            what = "quote" if claim.kind == "decision" else "claim text"
             report.findings.append(AuditFinding(
                 claim.id, claim.page_id, claim.source, "claim-not-supported",
-                f"cited lines do not contain the claim text: {claim.text[:80]!r}"))
+                f"cited lines do not contain the {what}: {target[:80]!r}"))
 
     store.log_event("audit", target="brain", detail={
         "checked": report.checked, "ok": report.ok, "skipped": report.skipped,

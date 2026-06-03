@@ -1,0 +1,14 @@
+[
+  {"decision": "Use SQLite instead of Postgres",
+   "rationale": "keep deployment free and laptop-local",
+   "quote": "We chose SQLite over Postgres to keep deployment free and laptop-local.",
+   "line": 3},
+  {"decision": "Crash overlay is defensive-only",
+   "rationale": "it never increases risk exposure",
+   "quote": "The crash overlay is defensive-only: it never increases risk exposure.",
+   "line": 5},
+  {"decision": "Validate with walk-forward backtesting",
+   "rationale": "avoid a single train/test split",
+   "quote": "We validate with walk-forward backtesting, not a single train/test split.",
+   "line": 7}
+]

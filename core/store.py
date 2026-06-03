@@ -131,17 +131,22 @@ class Store:
         self._conn.execute("DELETE FROM claims WHERE page_id = ?", (page.id,))
         for c in page.claims:
             self._conn.execute(
-                "INSERT INTO claims (id, page_id, text, source, tier, status, created) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (c.id, page.id, c.text, c.source, int(c.tier), c.status, c.created),
+                "INSERT INTO claims (id, page_id, text, source, tier, status, created, "
+                "kind, rationale, quote) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (c.id, page.id, c.text, c.source, int(c.tier), c.status, c.created,
+                 c.kind, c.rationale, c.quote),
             )
 
     # -- claims (read-only; writes go through pages, never the index directly) #
     def _claims_from_rows(self, rows) -> list[Claim]:
+        keys = set(rows[0].keys()) if rows else set()
         return [
             Claim(
                 id=r["id"], page_id=r["page_id"], text=r["text"], source=r["source"],
                 tier=r["tier"], status=r["status"], created=r["created"],
+                kind=r["kind"] if "kind" in keys else "fact",
+                rationale=r["rationale"] if "rationale" in keys else None,
+                quote=r["quote"] if "quote" in keys else None,
             )
             for r in rows
         ]

@@ -116,10 +116,7 @@ class Page:
             # them — including deprecation state, which exists in no source.
             # tier/page_id/created are derived from the page on load, so they
             # aren't persisted here.
-            "claims": [
-                {"id": c.id, "text": c.text, "source": c.source, "status": c.status}
-                for c in self.claims
-            ],
+            "claims": [_claim_front_matter(c) for c in self.claims],
         }
         return {k: raw[k] for k in _FRONTMATTER_ORDER}
 
@@ -143,6 +140,8 @@ class Page:
             Claim(
                 id=c["id"], page_id=pid, text=c["text"], source=c["source"],
                 tier=tier, status=c.get("status", STATUS_ACTIVE), created=created,
+                kind=c.get("kind", "fact"), rationale=c.get("rationale"),
+                quote=c.get("quote"),
             )
             for c in (fm.get("claims") or [])
         ]
@@ -172,6 +171,15 @@ class Claim:
     """An atomic, provenance-carrying statement extracted into a page.
 
     `source` is a single provenance span (same grammar as Page.sources).
+
+    `kind` distinguishes how the claim was produced — load-bearing so a raw,
+    un-digested snippet can never masquerade as an understood decision:
+      - "fact"     : deterministic ingest (README bullet, doc first line, tool)
+      - "raw"      : cheap doc-ingest, prose NOT yet distilled by the LLM
+      - "decision" : LLM-distilled architectural decision (carries rationale+quote)
+    `rationale` is the *why* (decisions only). `quote` is the verbatim source span
+    the decision/rationale is grounded in — audit verifies the QUOTE, letting a
+    human grade the REASONING that deterministic checks can't.
     """
 
     id: str
@@ -181,6 +189,22 @@ class Claim:
     tier: int
     status: str = STATUS_ACTIVE
     created: str = field(default_factory=utcnow_iso)
+    kind: str = "fact"
+    rationale: str | None = None
+    quote: str | None = None
+
+
+def _claim_front_matter(c: "Claim") -> dict[str, Any]:
+    """Serialize a claim for page front-matter; only emit kind/rationale/quote when
+    set, so deterministic `fact` claims stay clean and decisions carry their why."""
+    d: dict[str, Any] = {"id": c.id, "text": c.text, "source": c.source, "status": c.status}
+    if c.kind and c.kind != "fact":
+        d["kind"] = c.kind
+    if c.rationale:
+        d["rationale"] = c.rationale
+    if c.quote:
+        d["quote"] = c.quote
+    return d
 
 
 def _split_front_matter(text: str) -> tuple[dict[str, Any], str]:
@@ -199,7 +223,7 @@ def _split_front_matter(text: str) -> tuple[dict[str, Any], str]:
 # --------------------------------------------------------------------------- #
 # SQLite DDL — the six derived tables (CLAUDE.md §7 Session 1, task 1)
 # --------------------------------------------------------------------------- #
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 DDL = """
 CREATE TABLE IF NOT EXISTS pages (
@@ -231,13 +255,16 @@ CREATE TABLE IF NOT EXISTS edges (
 );
 
 CREATE TABLE IF NOT EXISTS claims (
-    id      TEXT PRIMARY KEY,
-    page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
-    text    TEXT NOT NULL,
-    source  TEXT NOT NULL,                 -- provenance span
-    tier    INTEGER NOT NULL,
-    status  TEXT NOT NULL DEFAULT 'active',
-    created TEXT NOT NULL
+    id        TEXT PRIMARY KEY,
+    page_id   TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
+    text      TEXT NOT NULL,
+    source    TEXT NOT NULL,               -- provenance span
+    tier      INTEGER NOT NULL,
+    status    TEXT NOT NULL DEFAULT 'active',
+    created   TEXT NOT NULL,
+    kind      TEXT NOT NULL DEFAULT 'fact', -- fact | raw | decision
+    rationale TEXT,                         -- the "why" (decisions only)
+    quote     TEXT                          -- verbatim source span (decisions; audited)
 );
 
 CREATE TABLE IF NOT EXISTS tombstones (

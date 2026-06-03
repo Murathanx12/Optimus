@@ -504,7 +504,8 @@ def ingest_folder(store: Store, source: str, project: str | None = None) -> Inge
             if rm.description:
                 description = rm.description
                 claims.append(Claim(id=f"{slug}-desc", page_id=f"{slug}-overview",
-                                    text=rm.description, source=_fspan(slug, readme_rel, 1), tier=2))
+                                    text=rm.description,
+                                    source=_fspan(slug, readme_rel, rm.desc_line or 1), tier=2))
             for n, (text, ln) in enumerate(rm.capabilities[:15]):
                 claims.append(Claim(id=f"{slug}-cap-{n:02d}", page_id=f"{slug}-overview",
                                     text=text, source=_fspan(slug, readme_rel, ln), tier=2))

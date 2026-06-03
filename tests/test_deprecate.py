@@ -171,6 +171,41 @@ def test_reingest_flags_tombstoned_entity_never_revives(buzzer_repo, optimus_roo
                    for c in store.all_claims(status=STATUS_ACTIVE))
 
 
+def test_tombstone_survives_full_index_deletion(optimus_root):
+    """Portability gap closed: tombstones rebuild from tombstones.md after the
+    entire index.db is deleted — so dead facts can't revive on a full rebuild."""
+    from pathlib import Path
+
+    from core.ingest import _flag_tombstoned
+
+    store = Store(optimus_root)
+    store.write_page(Page(
+        id="n1", title="N1", tier=2, type="note", project="p",
+        body="- The buzzer beeps.\n",
+        claims=[Claim(id="n1-c1", page_id="n1", text="The buzzer beeps.",
+                      source="folder:p:n1.md#L1", tier=2)],
+    ))
+    deprecate(store, "buzzer", reason="removed from hardware", date="2026-06-03", confirm=None)
+    assert store.list_tombstones()
+    store.close()
+
+    # Nuke the entire derived index.
+    (Path(optimus_root) / "brain" / "index.db").unlink()
+
+    store2 = Store(optimus_root)
+    assert store2.list_tombstones() == []          # fresh empty db, pre-reindex
+    store2.reindex()                               # rebuild from markdown alone
+    toms = store2.list_tombstones()
+    assert any(t["entity"] == "buzzer" for t in toms), "tombstone must survive full index loss"
+
+    # And the re-ingestion block is restored: a new buzzer mention still flags.
+    flagged = _flag_tombstoned(store2, [Claim(
+        id="n2-c1", page_id="n2", text="The buzzer is back.",
+        source="folder:p:n2.md#L1", tier=2)])
+    assert flagged, "restored tombstone must still block re-ingestion"
+    store2.close()
+
+
 def test_entity_page_itself_is_deprecated(optimus_root):
     """If the entity resolves to a page (alias), that page's status flips too."""
     store = Store(optimus_root)

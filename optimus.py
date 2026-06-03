@@ -14,6 +14,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from core.audit import audit as run_audit
 from core.deprecate import deprecate as run_deprecate
 from core.ingest import ingest_folder, ingest_git
 from core.query import format_answer, retrieve
@@ -74,6 +75,17 @@ def cmd_deprecate(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_audit(args: argparse.Namespace) -> int:
+    with Store(args.root) as store:
+        report = run_audit(store)
+    print(report.summary())
+    for f in report.findings:
+        print(f"  [{f.reason}] {f.claim_id} ({f.page_id})")
+        print(f"      source: {f.source}")
+        print(f"      {f.detail}")
+    return 1 if report.findings else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")  # Windows consoles default to cp1252
@@ -100,6 +112,9 @@ def main(argv: list[str] | None = None) -> int:
     p_dep.add_argument("--yes", action="store_true", help="skip the confirm prompt")
     p_dep.add_argument("--dry-run", action="store_true", help="preview references only, no changes")
     p_dep.set_defaults(func=cmd_deprecate)
+
+    p_audit = sub.add_parser("audit", help="verify every claim against its cited source (report-only)")
+    p_audit.set_defaults(func=cmd_audit)
 
     args = parser.parse_args(argv)
     return args.func(args)

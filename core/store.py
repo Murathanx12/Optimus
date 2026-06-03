@@ -19,6 +19,8 @@ import re
 import sqlite3
 from pathlib import Path
 
+import yaml
+
 from .schema import (
     DDL,
     STATUS_ACTIVE,
@@ -238,14 +240,22 @@ class Store:
         return out
 
     def _rewrite_tombstones_md(self) -> None:
-        """Regenerate brain/tombstones.md from the table (markdown is the export)."""
-        lines = [
+        """Write brain/tombstones.md as the SOURCE OF TRUTH: machine-readable
+        front-matter (re-parsed by reindex) + a human-readable body. Symmetric to
+        how pages carry claims — so tombstones survive a full index rebuild."""
+        toms = self.list_tombstones()
+        fm = {"tombstones": [
+            {"id": t["id"], "entity": t["entity"], "aliases": t["aliases"],
+             "pages": t["pages"], "reason": t["reason"], "created": t["created"]}
+            for t in toms
+        ]}
+        body = [
             "# Tombstones", "",
             "Dead facts. Each blocks silent re-ingestion of the entity "
-            "(CLAUDE.md §4.5 `deprecate`).", "",
+            "(CLAUDE.md §4.5 `deprecate`). Front-matter above is source of truth.", "",
         ]
-        for t in self.list_tombstones():
-            lines += [
+        for t in toms:
+            body += [
                 f"## {t['entity']}", "",
                 f"- deprecated: {t['created']}",
                 f"- reason: {t['reason']}",
@@ -253,7 +263,24 @@ class Store:
                 f"- pages: {', '.join(t['pages']) or '(none)'}",
                 "",
             ]
-        (self.brain / "tombstones.md").write_text("\n".join(lines), encoding="utf-8")
+        text = ("---\n"
+                + yaml.safe_dump(fm, sort_keys=False, allow_unicode=True)
+                + "---\n\n" + "\n".join(body) + "\n")
+        (self.brain / "tombstones.md").write_text(text, encoding="utf-8")
+
+    def _parse_tombstones_md(self) -> list[dict]:
+        """Read tombstone records from tombstones.md front-matter (source of truth)."""
+        path = self.brain / "tombstones.md"
+        if not path.exists():
+            return []
+        text = path.read_text(encoding="utf-8")
+        if not text.startswith("---"):
+            return []
+        parts = text.split("---", 2)
+        if len(parts) < 3:
+            return []
+        fm = yaml.safe_load(parts[1]) or {}
+        return list(fm.get("tombstones") or [])
 
     # -- queries used by tests / reporting ---------------------------------- #
     def page_count(self, project: str | None = None) -> int:
@@ -304,10 +331,25 @@ class Store:
         self._conn.execute("DELETE FROM pages")
         count = 0
         for md in sorted(self.brain.rglob("*.md")):
-            if md.name == "tombstones.md":          # index artifact, not a brain page
+            if md.name == "tombstones.md":          # rebuilt from its front-matter below
                 continue
             page = Page.from_markdown(md.read_text(encoding="utf-8"))
             self._index_page(page, md)
             count += 1
+        # Tombstones are derived too: rebuild the table from tombstones.md so dead
+        # facts (and their re-ingestion block) survive a full index deletion.
+        self._conn.execute("DELETE FROM tombstones")
+        for t in self._parse_tombstones_md():
+            self._conn.execute(
+                """
+                INSERT OR REPLACE INTO tombstones
+                    (id, entity, canonical_alias, aliases, pages, reason, source, created)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (t["id"], t["entity"], t.get("entity"),
+                 json.dumps(list(t.get("aliases") or [])),
+                 json.dumps(list(t.get("pages") or [])),
+                 t.get("reason", ""), None, t.get("created", "")),
+            )
         self._conn.commit()
         return count

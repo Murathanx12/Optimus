@@ -13,6 +13,7 @@ import pytest
 
 from core.ingest import ingest_git
 from core.query import format_answer, retrieve
+from core.schema import Page
 from core.store import Store
 
 # Locked retrieval snapshot: query → ordered page ids expected back.
@@ -81,6 +82,19 @@ def test_retrieval_makes_no_llm_call(aegis_like, monkeypatch):
     monkeypatch.setattr(llm.StaticCompleter, "complete", boom)
     result = retrieve(aegis_like, "what is test project")
     assert result.top is not None  # produced a useful answer with the seam untouched
+
+
+def test_written_page_is_immediately_queryable_without_reindex(optimus_root):
+    """Pins 'every written page is immediately queryable' — guards the seed-not-
+    indexed regression (write_page must auto-index; no manual reindex required)."""
+    with Store(optimus_root) as store:
+        store.write_page(Page(
+            id="acme-identity", title="Acme Identity", tier=1, type="identity",
+            aliases=["Acme"], body="# Acme\n\n> the operative identity\n",
+        ))
+        # Deliberately NO store.reindex() here.
+        top = retrieve(store, "Acme").top
+        assert top is not None and top.page_id == "acme-identity"
 
 
 def test_query_logs_event(aegis_like):

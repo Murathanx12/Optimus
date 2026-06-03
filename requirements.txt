@@ -1,3 +1,4 @@
 # Optimus — Phase 1 (laptop-only, ~$0 infra). SQLite is stdlib.
 pyyaml>=6.0
 pytest>=8.0
+hypothesis>=6.0   # property test for the deprecate never-revive invariant

@@ -100,7 +100,8 @@ snapshots the brain off-machine. Forkers get the same boundary.
 
 ## Gaps / not yet built
 - **Edges aren't persisted to markdown** → `reindex()` drops them (same class as
-  the now-fixed claims gap, lower priority; no current feature depends on edges).
+  the now-fixed claims + tombstone gaps; lower priority — no current feature
+  depends on edges. Fix: serialize edges into front-matter, rebuild on reindex.)
 - **Property test (deprecate step 5)** — `ingest→ingest→deprecate→ingest` never
   silently revives — pending (its own session, against the now-stable model).
 - **Not built:** `distill` (first LLM op), MCP server, daemon, router, lint, audit.

@@ -15,17 +15,20 @@ import sys
 from pathlib import Path
 
 from core.deprecate import deprecate as run_deprecate
-from core.ingest import ingest_git
+from core.ingest import ingest_folder, ingest_git
 from core.query import format_answer, retrieve
 from core.store import Store
 
 
 def cmd_ingest(args: argparse.Namespace) -> int:
-    if not args.git:
-        print("Session 1 supports only --git <source>.", file=sys.stderr)
+    if not (args.git or args.folder):
+        print("pass --git <repo> or --folder <path>.", file=sys.stderr)
         return 2
     with Store(args.root) as store:
-        result = ingest_git(store, args.git, project=args.project)
+        if args.git:
+            result = ingest_git(store, args.git, project=args.project)
+        else:
+            result = ingest_folder(store, args.folder, project=args.project)
     print(result.summary())
     for pid in result.pages:
         print(f"  page: brain/projects/{result.project}/{pid}.md")
@@ -81,6 +84,7 @@ def main(argv: list[str] | None = None) -> int:
 
     p_ingest = sub.add_parser("ingest", help="ingest a source into the brain")
     p_ingest.add_argument("--git", metavar="SRC", help="git repo: local path or remote URL")
+    p_ingest.add_argument("--folder", metavar="PATH", help="local folder (structure + text files)")
     p_ingest.add_argument("--project", metavar="SLUG", help="override project slug")
     p_ingest.set_defaults(func=cmd_ingest)
 

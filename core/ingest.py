@@ -21,6 +21,7 @@ Session 1 is deterministic — no LLM call. Structural distillation only.
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 from collections import Counter
@@ -80,9 +81,11 @@ class IngestResult:
 
     def summary(self) -> str:
         flagged = f" flagged={len(self.flagged_claims)}" if self.flagged_claims else ""
+        sha = f" sha={self.sha[:7]}" if self.sha else ""
+        commits = f" commits={self.commit_count}" if self.commit_count else ""
         return (
-            f"project={self.project} sha={self.sha[:7]} pages={len(self.pages)} "
-            f"claims={self.claim_count} files={self.file_count} commits={self.commit_count}{flagged}"
+            f"project={self.project}{sha} pages={len(self.pages)} "
+            f"claims={self.claim_count} files={self.file_count}{commits}{flagged}"
         )
 
 
@@ -392,3 +395,192 @@ def _flag_tombstoned(store: Store, claims: list[Claim]) -> list[str]:
             c.status = STATUS_FLAGGED
             flagged.append(c.id)
     return flagged
+
+
+# --------------------------------------------------------------------------- #
+# folder channel (CLAUDE.md §5.2) — Tier A (structure + tools) + Tier B (text)
+# --------------------------------------------------------------------------- #
+# Extension → tool/software. The cheap, deterministic "what is he using" signal:
+# learned from file extensions, never from reading file contents.
+_TOOL_BY_EXT = {
+    "blend": "Blender", "blend1": "Blender",
+    "f3d": "Fusion 360", "f3z": "Fusion 360",
+    "fbx": "3D asset (FBX)", "obj": "3D asset (OBJ)", "gltf": "glTF", "glb": "glTF",
+    "stl": "3D print / mesh", "3mf": "3D print", "step": "CAD (STEP)", "stp": "CAD (STEP)",
+    "iges": "CAD (IGES)", "igs": "CAD (IGES)",
+    "sldprt": "SolidWorks", "sldasm": "SolidWorks", "slddrw": "SolidWorks",
+    "dwg": "AutoCAD", "dxf": "CAD (DXF)",
+    "kicad_pcb": "KiCad", "kicad_sch": "KiCad", "sch": "EDA schematic", "brd": "PCB layout",
+    "ino": "Arduino", "hex": "firmware",
+    "ipynb": "Jupyter", "py": "Python", "js": "JavaScript", "ts": "TypeScript",
+    "tsx": "React/TSX", "jsx": "React",
+    "psd": "Photoshop", "kra": "Krita", "ai": "Illustrator", "xcf": "GIMP",
+    "ztl": "ZBrush", "zpr": "ZBrush", "spp": "Substance Painter", "sbs": "Substance Designer",
+    "unity": "Unity", "uasset": "Unreal", "umap": "Unreal",
+    "sldworks": "SolidWorks", "tex": "LaTeX", "docx": "Word", "pptx": "PowerPoint",
+    "xlsx": "Excel", "c": "C", "cpp": "C++", "h": "C/C++ header", "rs": "Rust",
+    "go": "Go", "java": "Java", "cs": "C#",
+}
+_TEXT_EXT = {"md", "markdown", "txt", "rst"}
+_IGNORE_DIRS = {
+    ".git", "node_modules", "__pycache__", ".venv", "venv", "env", ".cache",
+    "dist", "build", ".next", "out", ".idea", ".vscode", ".gradle",
+    ".mypy_cache", ".pytest_cache", "site-packages",
+}
+_MAX_DOC_FILES = 40
+_MAX_DOC_BYTES = 64_000
+
+
+def _fspan(slug: str, relpath: str, line: int | None = None) -> str:
+    base = f"folder:{slug}:{relpath}"
+    return f"{base}#L{line}" if line else base
+
+
+def _walk_folder(root: Path) -> tuple[list[str], float]:
+    """Return (relative posix paths, newest mtime). Skips junk dirs + dotfiles.
+    Reads only directory entries — never file contents."""
+    rels: list[str] = []
+    newest = 0.0
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in _IGNORE_DIRS and not d.startswith(".")]
+        for fn in filenames:
+            if fn.startswith("."):                  # dotfiles (e.g. .env) never enter the brain
+                continue
+            p = Path(dirpath) / fn
+            rels.append(p.relative_to(root).as_posix())
+            try:
+                newest = max(newest, p.stat().st_mtime)
+            except OSError:
+                pass
+    return rels, newest
+
+
+def _detect_tools(rels: list[str]) -> list[tuple[str, int]]:
+    counts: Counter = Counter()
+    for r in rels:
+        ext = Path(r).suffix.lower().lstrip(".")
+        if ext in _TOOL_BY_EXT:
+            counts[_TOOL_BY_EXT[ext]] += 1
+    return counts.most_common()
+
+
+def _first_meaningful_line(text: str) -> str:
+    for line in text.splitlines():
+        s = line.strip().lstrip("#>-*").strip()
+        if s:
+            return s
+    return ""
+
+
+def ingest_folder(store: Store, source: str, project: str | None = None) -> IngestResult:
+    """Ingest a local folder. Tier A: structure + tool detection from names/extensions
+    (no contents read). Tier B: read small text/doc files only (binaries never opened)."""
+    root = Path(source).resolve()
+    if not root.is_dir():
+        raise ValueError(f"not a folder: {root}")
+    name = root.name
+    slug = project or _slugify(name)
+
+    rels, newest = _walk_folder(root)               # Tier A — names/extensions only
+    tools = _detect_tools(rels)
+    comp = _composition(rels)
+    modules = _module_map(rels)
+    newest_date = ""
+    if newest:
+        import datetime as _dt
+        newest_date = _dt.datetime.fromtimestamp(newest).strftime("%Y-%m-%d")
+
+    # Tier B — read doc/text files only, capped, binaries skipped entirely.
+    display_name = name
+    description = None
+    claims: list[Claim] = []
+
+    readme_rel = next((r for r in rels if Path(r).name.lower().startswith("readme")), None)
+    if readme_rel:
+        try:
+            rm = _parse_readme((root / readme_rel).read_text(encoding="utf-8", errors="replace"))
+            if rm.title:
+                display_name = rm.title
+            if rm.description:
+                description = rm.description
+                claims.append(Claim(id=f"{slug}-desc", page_id=f"{slug}-overview",
+                                    text=rm.description, source=_fspan(slug, readme_rel, 1), tier=2))
+            for n, (text, ln) in enumerate(rm.capabilities[:15]):
+                claims.append(Claim(id=f"{slug}-cap-{n:02d}", page_id=f"{slug}-overview",
+                                    text=text, source=_fspan(slug, readme_rel, ln), tier=2))
+        except OSError:
+            pass
+
+    # Tool-usage facts become claims (this is the "he uses Blender + Fusion" signal).
+    for i, (tool, n) in enumerate(tools):
+        claims.append(Claim(id=f"{slug}-tool-{i:02d}", page_id=f"{slug}-overview",
+                            text=f"Uses {tool} ({n} file{'s' if n != 1 else ''})",
+                            source=_fspan(slug, "."), tier=2))
+
+    # Other doc files → one claim each (path + first line), capped.
+    docs = [r for r in rels
+            if Path(r).suffix.lower().lstrip(".") in _TEXT_EXT and r != readme_rel]
+    for r in docs[:_MAX_DOC_FILES]:
+        fp = root / r
+        try:
+            if fp.stat().st_size > _MAX_DOC_BYTES:
+                continue
+            first = _first_meaningful_line(fp.read_text(encoding="utf-8", errors="replace"))
+        except OSError:
+            continue
+        if first:
+            claims.append(Claim(id=f"{slug}-doc-{len([c for c in claims if '-doc-' in c.id]):02d}",
+                                page_id=f"{slug}-overview",
+                                text=f"{r}: {first}", source=_fspan(slug, r, 1), tier=2))
+
+    # --- pages ---
+    ov_lines = [f"# {display_name}", "",
+                f"> {description}" if description else "> Local folder ingested by Optimus (folder channel).",
+                ""]
+    if tools:
+        ov_lines += ["## Tools detected", ""]
+        ov_lines += [f"- {tool} — {n} file{'s' if n != 1 else ''}" for tool, n in tools]
+        ov_lines.append("")
+    ov_lines += ["## Activity", "",
+                 f"- Tracked files: **{len(rels)}**",
+                 f"- Most recent edit: {newest_date or 'unknown'}", ""]
+    overview = Page(
+        id=f"{slug}-overview", title=f"{display_name} — Overview", tier=int(Tier.PROJECTS),
+        type="overview", project=slug, aliases=[slug, display_name, name, slug.split("-")[0]],
+        tags=["project", "overview", "folder"], sources=[_fspan(slug, ".")],
+        body="\n".join(ov_lines),
+    )
+
+    st_lines = [f"# {display_name} — Structure", "",
+                f"Files: **{len(rels)}** (folder channel; binaries counted, not read; "
+                "junk dirs + dotfiles skipped).", "", "## Top-level", ""]
+    for top, children in modules.items():
+        shown = ", ".join(children[:12])
+        more = f" … (+{len(children) - 12} more)" if len(children) > 12 else ""
+        st_lines.append(f"- **{top}** — {shown}{more}")
+    st_lines += ["", "## File composition", ""]
+    st_lines += [f"- `.{ext}` × {n}" for ext, n in comp]
+    structure = Page(
+        id=f"{slug}-structure", title=f"{display_name} — Structure", tier=int(Tier.PROJECTS),
+        type="structure", project=slug, aliases=[f"{slug} structure"],
+        tags=["project", "structure", "folder"], sources=[_fspan(slug, ".")],
+        body="\n".join(st_lines),
+    )
+
+    flagged = _flag_tombstoned(store, claims)
+    overview.claims = claims
+    for page in (overview, structure):
+        store.write_page(page)
+    store.add_edge(structure.id, overview.id, "part_of")
+
+    result = IngestResult(
+        project=slug, sha="", pages=[overview.id, structure.id],
+        claim_count=len(claims), file_count=len(rels), commit_count=0,
+        flagged_claims=flagged,
+    )
+    store.log_event("ingest", target=slug, detail={
+        "channel": "folder", "source": str(root), "pages": result.pages,
+        "claims": result.claim_count, "files": result.file_count,
+        "tools": [t for t, _ in tools], "flagged": flagged,
+    })
+    return result

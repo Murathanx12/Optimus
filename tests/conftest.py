@@ -98,6 +98,27 @@ def buzzer_repo(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
+def synthetic_folder(tmp_path: Path) -> Path:
+    """A non-git folder with binaries + text + junk, for folder-ingest tests."""
+    root = tmp_path / "my-art"
+    root.mkdir()
+    (root / "README.md").write_text("# My Art\n\n> A folder of 3D experiments.\n", encoding="utf-8")
+    (root / "notes.txt").write_text("Trying hard-surface modeling this week.\n", encoding="utf-8")
+    (root / "robot.blend").write_bytes(b"BLENDER\x00\x01binary-not-text")   # must NOT be read
+    (root / "part.f3d").write_bytes(b"\x00fusion-binary")
+    (root / "build.py").write_text("print('hi')\n", encoding="utf-8")
+    scene = root / "scene01"
+    scene.mkdir()
+    (scene / "hero.blend").write_bytes(b"\x00\x01blend")
+    (scene / "tex.png").write_bytes(b"\x89PNG\x00")
+    junk = root / "node_modules"          # must be ignored
+    junk.mkdir()
+    (junk / "lib.js").write_text("x", encoding="utf-8")
+    (root / ".env").write_text("SECRET=do-not-ingest", encoding="utf-8")     # dotfile, skipped
+    return root
+
+
+@pytest.fixture
 def optimus_root(tmp_path: Path) -> Path:
     """An isolated Optimus root (brain/ + index.db created on demand)."""
     root = tmp_path / "optimus-root"

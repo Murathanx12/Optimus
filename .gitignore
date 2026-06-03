@@ -1,0 +1,35 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.hypothesis/
+
+# --- The privacy boundary ---
+# The engine is open-source-intended; the brain CONTENT is private and must
+# never share git history. Paths are anchored with a leading "/" so they match
+# ONLY the real top-level dirs — examples/brain/ (synthetic, committed to
+# demonstrate the layout) is deliberately NOT ignored.
+# NOTE: git does not support trailing inline comments on patterns — keep them
+# on their own lines, or the pattern silently matches nothing.
+
+# real identity tier, project memory, conversation distillations
+/brain/
+# dropped exports, transcripts, notes before distillation
+/raw/
+# session reports — may carry private project detail
+/reports/
+
+# Derived SQLite index — rebuildable via Store.reindex(), NEVER source of truth.
+index.db
+index.db-wal
+index.db-shm
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# OS
+Thumbs.db
+.DS_Store

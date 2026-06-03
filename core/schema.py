@@ -47,6 +47,7 @@ _FRONTMATTER_ORDER = (
     "aliases",
     "tags",
     "sources",
+    "source_root",
     "status",
     "created",
     "updated",
@@ -82,6 +83,11 @@ class Page:
     aliases: list[str] = field(default_factory=list)
     tags: list[str] = field(default_factory=list)
     sources: list[str] = field(default_factory=list)
+    # Where this page's sources can be re-read from (repo path / folder root). Lives
+    # in front-matter so audit's verifiability is durable — survives index deletion
+    # and doesn't depend on the ephemeral events table. Machine-specific: absent =>
+    # UNVERIFIABLE-HERE, not failure.
+    source_root: str | None = None
     status: str = STATUS_ACTIVE
     created: str = field(default_factory=utcnow_iso)
     updated: str = field(default_factory=utcnow_iso)
@@ -109,6 +115,7 @@ class Page:
             "aliases": list(self.aliases),
             "tags": list(self.tags),
             "sources": list(self.sources),
+            "source_root": self.source_root,
             "status": self.status,
             "created": self.created,
             "updated": self.updated,
@@ -155,6 +162,7 @@ class Page:
             aliases=list(fm.get("aliases") or []),
             tags=list(fm.get("tags") or []),
             sources=list(fm.get("sources") or []),
+            source_root=fm.get("source_root"),
             status=fm.get("status", STATUS_ACTIVE),
             created=created,
             updated=fm.get("updated", utcnow_iso()),
@@ -223,7 +231,7 @@ def _split_front_matter(text: str) -> tuple[dict[str, Any], str]:
 # --------------------------------------------------------------------------- #
 # SQLite DDL — the six derived tables (CLAUDE.md §7 Session 1, task 1)
 # --------------------------------------------------------------------------- #
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 DDL = """
 CREATE TABLE IF NOT EXISTS pages (
@@ -236,7 +244,8 @@ CREATE TABLE IF NOT EXISTS pages (
     status       TEXT NOT NULL DEFAULT 'active',
     content_hash TEXT NOT NULL,
     created      TEXT NOT NULL,
-    updated      TEXT NOT NULL
+    updated      TEXT NOT NULL,
+    source_root  TEXT                    -- where sources re-read from (durable verifiability)
 );
 
 CREATE TABLE IF NOT EXISTS aliases (

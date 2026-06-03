@@ -92,13 +92,14 @@ class Store:
         self._conn.execute(
             """
             INSERT INTO pages (id, title, tier, type, project, path, status,
-                               content_hash, created, updated)
+                               content_hash, created, updated, source_root)
             VALUES (:id, :title, :tier, :type, :project, :path, :status,
-                    :content_hash, :created, :updated)
+                    :content_hash, :created, :updated, :source_root)
             ON CONFLICT(id) DO UPDATE SET
                 title=excluded.title, tier=excluded.tier, type=excluded.type,
                 project=excluded.project, path=excluded.path, status=excluded.status,
-                content_hash=excluded.content_hash, updated=excluded.updated
+                content_hash=excluded.content_hash, updated=excluded.updated,
+                source_root=excluded.source_root
             """,
             {
                 "id": page.id,
@@ -111,6 +112,7 @@ class Store:
                 "content_hash": page.body_hash,
                 "created": page.created,
                 "updated": page.updated,
+                "source_root": page.source_root,
             },
         )
         # Aliases: refresh the set for this page. The page id is always a (canonical) alias.

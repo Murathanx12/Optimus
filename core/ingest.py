@@ -351,6 +351,7 @@ def ingest_git(store: Store, source: str, project: str | None = None) -> IngestR
     overview.claims = claims                      # claims live on the page (front-matter)
 
     for page in (overview, structure, history):
+        page.source_root = str(repo)              # durable verifiability (audit re-reads here)
         store.write_page(page)
 
     # Typed edges: structure and history are part_of the overview.
@@ -571,6 +572,7 @@ def ingest_folder(store: Store, source: str, project: str | None = None) -> Inge
     flagged = _flag_tombstoned(store, claims)
     overview.claims = claims
     for page in (overview, structure):
+        page.source_root = str(root)              # durable verifiability (audit re-reads here)
         store.write_page(page)
     store.add_edge(structure.id, overview.id, "part_of")
 

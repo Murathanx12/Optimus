@@ -120,7 +120,7 @@ def _render_body(name: str, claims: list[Claim], mode: str) -> str:
 def distill_docs(
     store: Store, *, project: str, docs: list[tuple[str, str]],
     completer: Completer | None = None, mode: str = "expensive",
-    display_name: str | None = None,
+    display_name: str | None = None, source_root: str | None = None,
 ) -> DistillResult:
     """Distill decision-claims from `docs` = [(source_prefix, text), ...] into a
     `<project>-decisions` page. source_prefix is the provenance grammar minus the
@@ -150,7 +150,7 @@ def distill_docs(
         id=f"{project}-decisions", title=f"{name} — Decisions", tier=int(Tier.PROJECTS),
         type="decisions", project=project, aliases=[f"{project} decisions"],
         tags=["project", "decisions", mode], sources=[p for p, _ in docs],
-        body=_render_body(name, claims, mode), claims=claims,
+        source_root=source_root, body=_render_body(name, claims, mode), claims=claims,
     )
     store.write_page(page)
     kinds = dict(Counter(c.kind for c in claims))

@@ -1,58 +1,119 @@
-"""Tests for deterministic audit: verify claims against their cited source spans."""
+"""Tests for three-state audit + durable, portable verifiability.
+
+VERIFIED / DRIFTED (loud, = wrong) / UNVERIFIABLE-HERE (quiet, = uncheckable).
+Source root lives in page front-matter, so verifiability survives index deletion
+and a moved brain degrades gracefully instead of looking 100% broken."""
 
 from __future__ import annotations
 
-from core.audit import audit
+import re
+from pathlib import Path
+
+from core.audit import (
+    STATE_DRIFTED,
+    STATE_UNVERIFIABLE,
+    STATE_VERIFIED,
+    audit,
+)
 from core.ingest import ingest_folder, ingest_git
 from core.store import Store
 
+README = (
+    "# Proj\n"                                       # 1
+    "\n"                                             # 2
+    "> a small project\n"                            # 3
+    "\n"                                             # 4
+    "## What It Does\n"                              # 5
+    "\n"                                             # 6
+    "- The widget subsystem does the thing.\n"       # 7
+)
 
-def test_audit_passes_a_freshly_ingested_brain(synthetic_repo, optimus_root):
-    """Every claim from a fresh git ingest is supported by its cited span."""
+
+def _state(report, claim_id):
+    return next((r.state for r in report.results if r.claim_id == claim_id), None)
+
+
+def _capability_claim(store):
+    return next(c for c in store.claims_for("proj-overview") if "widget" in c.text.lower())
+
+
+def test_freshly_ingested_brain_is_all_verified(synthetic_repo, optimus_root):
     with Store(optimus_root) as store:
         ingest_git(store, str(synthetic_repo))
         report = audit(store)
-        assert report.checked > 0
-        assert report.findings == []
-        assert report.ok == report.checked
+        assert report.verified > 0
+        assert report.drifted == 0
+        assert report.unverifiable == 0
 
 
-def test_audit_catches_a_drifted_claim(synthetic_repo, optimus_root):
-    """A claim whose text no longer matches its cited source is flagged."""
+def test_three_states_verified_unverifiable_drifted(tmp_path, optimus_root):
+    folder = tmp_path / "proj"
+    folder.mkdir()
+    (folder / "README.md").write_text(README, encoding="utf-8")
+    with Store(optimus_root) as store:
+        ingest_folder(store, str(folder), project="proj")
+        cap = _capability_claim(store)
+
+        # 1. VERIFIED — source reachable, quote present.
+        assert _state(audit(store), cap.id) == STATE_VERIFIED
+
+        # 2. UNVERIFIABLE-HERE — delete the source file; NOT a failure.
+        (folder / "README.md").unlink()
+        report = audit(store)
+        assert _state(report, cap.id) == STATE_UNVERIFIABLE
+        rec = next(r for r in report.results if r.claim_id == cap.id)
+        assert rec.as_of and rec.quote                # last-known-good still reported
+        assert report.drifted == 0                    # nothing is "wrong"
+
+        # 3. DRIFTED — restore the file but change the cited line; loud.
+        line_no = int(re.search(r"#L(\d+)", cap.source).group(1))
+        lines = README.splitlines()
+        lines[line_no - 1] = "- The gadget does something unrelated now."
+        (folder / "README.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+        report = audit(store)
+        assert _state(report, cap.id) == STATE_DRIFTED
+        assert any(r.claim_id == cap.id for r in report.drift)
+
+
+def test_source_ref_survives_full_index_deletion(tmp_path, optimus_root):
+    """Verifiability is durable: source_root rebuilds from front-matter, so audit
+    still VERIFIES after the entire index.db is deleted — no events dependency."""
+    folder = tmp_path / "proj"
+    folder.mkdir()
+    (folder / "README.md").write_text(README, encoding="utf-8")
+    store = Store(optimus_root)
+    ingest_folder(store, str(folder), project="proj")
+    cap_id = _capability_claim(store).id
+    assert _state(audit(store), cap_id) == STATE_VERIFIED
+    store.close()
+
+    (Path(optimus_root) / "brain" / "index.db").unlink()      # nuke the derived index
+    store2 = Store(optimus_root)
+    store2.reindex()                                          # rebuild from markdown alone
+    assert _state(audit(store2), cap_id) == STATE_VERIFIED, \
+        "source_root must survive index deletion (durable verifiability)"
+    store2.close()
+
+
+def test_moved_brain_is_unverifiable_not_broken(tmp_path, optimus_root):
+    """The teardown scenario: source repo absent → UNVERIFIABLE-HERE, never DRIFTED."""
+    folder = tmp_path / "proj"
+    folder.mkdir()
+    (folder / "README.md").write_text(README, encoding="utf-8")
+    with Store(optimus_root) as store:
+        ingest_folder(store, str(folder), project="proj")
+        import shutil
+        shutil.rmtree(folder)                                 # whole source root gone
+        report = audit(store)
+        assert report.drifted == 0                            # not "wrong"
+        assert report.unverifiable >= 1                       # just uncheckable here
+
+
+def test_tampered_claim_text_is_drifted(synthetic_repo, optimus_root):
     with Store(optimus_root) as store:
         ingest_git(store, str(synthetic_repo))
         page = store.read_page("test-project-overview")
-        target = page.claims[1]                       # a capability claim
-        target.text = "This project cures cancer."    # not present at the cited span
+        page.claims[1].text = "This project cures cancer."     # source never says this
         store.write_page(page)
-
         report = audit(store)
-        flagged = [f for f in report.findings if f.reason == "claim-not-supported"]
-        assert any(f.claim_id == target.id for f in flagged), "drifted claim must be caught"
-        # Only the tampered claim drifts; the rest still verify.
-        assert report.ok == report.checked - 1
-
-
-def test_audit_flags_unreadable_source(synthetic_repo, optimus_root, tmp_path):
-    """A folder claim whose source file is gone is reported, not silently trusted."""
-    src = tmp_path / "proj"
-    src.mkdir()
-    (src / "README.md").write_text(
-        "# Proj\n\n> desc\n\n## What It Does\n\n- The widget does a thing.\n", encoding="utf-8")
-    with Store(optimus_root) as store:
-        ingest_folder(store, str(src), project="proj")
-        assert audit(store).findings == []            # clean while source exists
-        (src / "README.md").unlink()                  # source disappears
-        report = audit(store)
-        assert any(f.reason == "source-unreadable" for f in report.findings)
-
-
-def test_audit_skips_claims_without_a_span(synthetic_repo, optimus_root):
-    """Tool/desc claims with no line range (folder:slug:.) are skipped, not failed."""
-    src = synthetic_repo
-    with Store(optimus_root) as store:
-        ingest_folder(store, str(src), project="probe")
-        report = audit(store)
-        # nothing crashes; skipped count is tracked and non-span claims aren't findings
-        assert report.skipped >= 1
-        assert all(f.reason != "claim-not-supported" or f.claim_id for f in report.findings)
+        assert any(r.claim_id == page.claims[1].id for r in report.drift)

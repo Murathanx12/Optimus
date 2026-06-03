@@ -29,9 +29,10 @@ FIXTURE = (Path(__file__).parent / "fixtures" / "distill_design.json").read_text
 PREFIX = "folder:proj:DESIGN.md"
 
 
-def _distill(store, mode="expensive"):
+def _distill(store, mode="expensive", source_root=None):
     return distill_docs(store, project="proj", docs=[(PREFIX, SYNTH_DOC)],
-                        completer=StaticCompleter(default=FIXTURE), mode=mode)
+                        completer=StaticCompleter(default=FIXTURE), mode=mode,
+                        source_root=source_root)
 
 
 def test_extracts_decision_claims_with_rationale_and_quote(optimus_root):
@@ -61,16 +62,14 @@ def test_audit_verifies_distilled_quotes_and_catches_drift(tmp_path, optimus_roo
     proj.mkdir()
     (proj / "DESIGN.md").write_text(SYNTH_DOC, encoding="utf-8")
     with Store(optimus_root) as store:
-        store.log_event("ingest", target="proj", detail={"channel": "folder", "source": str(proj)})
-        _distill(store)
-        assert [f for f in audit(store).findings if f.reason == "claim-not-supported"] == []
+        _distill(store, source_root=str(proj))       # source_root makes decisions verifiable
+        assert audit(store).drift == []              # quotes verbatim → no drift
 
         # Drift the quote to something the source never says — audit must catch it.
         page = store.read_page("proj-decisions")
         page.claims[0].quote = "We chose MySQL for raw speed."
         store.write_page(page)
-        bad = [f for f in audit(store).findings if f.reason == "claim-not-supported"]
-        assert any(f.claim_id == "proj-dec-000" for f in bad)
+        assert any(r.claim_id == "proj-dec-000" for r in audit(store).drift)
 
 
 def test_cheap_mode_tags_raw_never_decision(optimus_root):

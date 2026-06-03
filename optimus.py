@@ -79,11 +79,18 @@ def cmd_audit(args: argparse.Namespace) -> int:
     with Store(args.root) as store:
         report = run_audit(store)
     print(report.summary())
-    for f in report.findings:
-        print(f"  [{f.reason}] {f.claim_id} ({f.page_id})")
-        print(f"      source: {f.source}")
-        print(f"      {f.detail}")
-    return 1 if report.findings else 0
+    # DRIFTED is loud — these claims are now WRONG.
+    for r in report.drift:
+        print(f"  DRIFTED  {r.claim_id} ({r.page_id})")
+        print(f"      source: {r.source}")
+        print(f"      {r.detail}")
+    # UNVERIFIABLE-HERE is quiet — not wrong, just uncheckable on this machine.
+    unver = [r for r in report.results if r.state == "unverifiable-here"]
+    if unver:
+        print(f"  ({len(unver)} unverifiable-here — source not reachable; "
+              f"last verified as of ingest, see brain front-matter)")
+    # Non-zero exit only on real drift (wrong facts), never on unverifiable.
+    return 1 if report.drift else 0
 
 
 def main(argv: list[str] | None = None) -> int:

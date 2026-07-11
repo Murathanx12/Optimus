@@ -1,16 +1,18 @@
 """Build the PUBLIC Optimus brain showcase — a static site for Vercel.
 
 Reads the brain STRICTLY read-only and exports ONLY the public slice:
+  - an interactive brain MAP (every page is a bubble; private pages are
+    anonymized — shape visible, content never)
   - aggregate corpus stats (counts by tier/type/project, event log ops)
   - the aegis-finance + aegis-quant-knowledge project pages (full text)
   - real retrieval-demo output (deterministic, LLM-free scoring)
 
-NEVER exported: identity, dispositions, conversations, and every non-aegis
-project (coursework, personal portfolio, hobbies) — those exist in the stats
-only as anonymous counts. All output is English.
+NEVER exported: identity/disposition content, conversations, and every
+non-aegis project's content (coursework, personal portfolio, hobbies) — those
+appear only as anonymous bubbles/counts. All output is English.
 
 Outputs into showcase/optimus-brain/ (the Vercel deploy root):
-  index.html   — human view
+  index.html   — human view (interactive map + explanations)
   brain.json   — machine view (CORS: *) for DeepSeek/Claude/any agent
   llms.txt     — plain-text index for LLM agents
   pages/*.md   — raw public pages
@@ -62,7 +64,6 @@ def corpus_stats(conn: sqlite3.Connection) -> dict:
         "pages": n_pages, "claims": n_claims, "aliases": n_aliases,
         "edges": n_edges, "last_updated": last_updated,
         "pages_by_type": by_type,
-        # project names other than the public ones are anonymized
         "pages_by_project": {
             (p if p in PUBLIC_PROJECTS else "private"): c
             for p, c in sorted(by_project.items())
@@ -93,6 +94,52 @@ def public_pages(conn: sqlite3.Connection) -> list[dict]:
     return out
 
 
+def graph_data(conn: sqlite3.Connection) -> dict:
+    """Nodes + edges for the interactive brain map. Private pages appear as
+    ANONYMOUS bubbles — real id/title/project replaced — so the brain's shape
+    is visible without leaking content."""
+    rows = conn.execute(
+        "SELECT id, title, type, project FROM pages WHERE status='active'"
+    ).fetchall()
+    claims = {r[0]: r[1] for r in conn.execute(
+        "SELECT page_id, COUNT(*) FROM claims GROUP BY page_id")}
+    edges = conn.execute(
+        "SELECT src_page_id, dst_page_id, rel FROM edges").fetchall()
+
+    anon_page: dict[str, str] = {}
+    anon_proj: dict[str, str] = {}
+    nodes = []
+    for r in sorted(rows, key=lambda x: x["id"]):
+        public = r["project"] in PUBLIC_PROJECTS
+        if public:
+            pid, title, proj = r["id"], r["title"], r["project"]
+        else:
+            pid = anon_page.setdefault(r["id"], f"private-{len(anon_page) + 1}")
+            title = None
+            if r["project"]:
+                proj = anon_proj.setdefault(
+                    r["project"], f"private project {len(anon_proj) + 1}")
+            else:
+                proj = None
+        nodes.append({"id": pid, "title": title, "type": r["type"],
+                      "project": proj, "claims": claims.get(r["id"], 0),
+                      "public": public})
+
+    node_ids = {n["id"] for n in nodes}
+
+    def _pid(raw: str) -> str | None:
+        if raw in node_ids:
+            return raw
+        return anon_page.get(raw)
+
+    links = []
+    for e in edges:
+        s, d = _pid(e["src_page_id"]), _pid(e["dst_page_id"])
+        if s and d:
+            links.append({"source": s, "target": d, "rel": e["rel"]})
+    return {"nodes": nodes, "links": links}
+
+
 def demo_retrievals(store: Store) -> list[dict]:
     out = []
     for query in DEMO_QUERIES:
@@ -102,7 +149,6 @@ def demo_retrievals(store: Store) -> list[dict]:
             "results": [
                 {"page_id": p.page_id, "title": p.title, "type": p.type,
                  "project": p.project, "score": p.score,
-                 # only public pages expose their path
                  "public": p.project in PUBLIC_PROJECTS}
                 for p in res.pages
             ],
@@ -159,10 +205,24 @@ def md_to_html(md: str) -> str:
     return "\n".join(out)
 
 
+# Plain-language meaning of each page type — shown in the map's detail panel.
+TYPE_EXPLAIN = {
+    "overview": "What a project IS — the summary page the AI reads first when "
+                "asked about it.",
+    "structure": "The project's map — how its files and modules are organized.",
+    "history": "The project's story over time, distilled from its git commits.",
+    "decisions": "Key decisions and their reasoning, each backed by a cited "
+                 "source.",
+    "identity": "Who the human behind the brain is. Private — never exported.",
+    "disposition": "How the human prefers to work and communicate. Private — "
+                   "never exported.",
+}
+
+
 def render_html(stats: dict, pages: list[dict], demos: list[dict],
-                commit: str, built_at: str) -> str:
+                graph: dict, commit: str, built_at: str) -> str:
     tiles = [
-        ("Pages", stats["pages"], "markdown knowledge pages"),
+        ("Pages", stats["pages"], "knowledge pages (bubbles on the map)"),
         ("Claims", stats["claims"], "atomic facts with provenance"),
         ("Aliases", stats["aliases"], "names that route a query"),
         ("Edges", stats["edges"], "links between pages"),
@@ -177,14 +237,6 @@ def render_html(stats: dict, pages: list[dict], demos: list[dict],
     ingest_html = "".join(
         f'<span class="pill">{html.escape(op)} × {n}</span>'
         for op, n in sorted(stats["events_by_op"].items())
-    )
-
-    proj_html = "".join(
-        f'<li><code>{html.escape(p)}</code> — {c} pages'
-        + (' <span class="badge-private">private, counts only</span>'
-           if p == "private" else ' <span class="badge-public">public below</span>')
-        + "</li>"
-        for p, c in stats["pages_by_project"].items()
     )
 
     demos_html = ""
@@ -205,39 +257,66 @@ def render_html(stats: dict, pages: list[dict], demos: list[dict],
     pages_html = ""
     for p in pages:
         pages_html += (
-            f'<details class="page"><summary><strong>{html.escape(p["title"])}</strong>'
+            f'<details class="page" id="page-{html.escape(p["id"])}">'
+            f'<summary><strong>{html.escape(p["title"])}</strong>'
             f' <span class="meta">{html.escape(p["project"])} · {html.escape(p["type"])}'
             f' · updated {html.escape(str(p["updated"]))}'
             f' · <a href="pages/{html.escape(p["id"])}.md">raw</a></span></summary>'
             f'<div class="page-body">{md_to_html(p["markdown"])}</div></details>'
         )
 
+    graph_json = json.dumps(graph)
+    type_explain_json = json.dumps(TYPE_EXPLAIN)
+
     return f"""<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Optimus Brain — Public Showcase</title>
-<meta name="description" content="A read-only window into Optimus: the personal memory layer behind Aegis Finance. English-only, machine-readable.">
+<title>Optimus Brain — Interactive Map</title>
+<meta name="description" content="An interactive map of Optimus: the memory layer behind Aegis Finance. English-only, machine-readable.">
 <style>
 :root {{
   --bg: #FAFAF7; --surface: #FFFFFF; --ink: #1A1A1A; --ink-2: #52525B;
-  --ink-3: #8E8E93; --line: #E4E4E0; --accent: #2C6E8F; --accent-ink: #1F546E;
+  --ink-3: #8E8E93; --line: #E4E4E0; --accent: #2C6E8F;
   --good-bg: #E7F2E9; --good-ink: #276236; --lock-bg: #F1F0EC;
+  --c-overview: #2a78d6; --c-structure: #1baf7a; --c-history: #eda100;
+  --c-decisions: #4a3aa7; --c-personal: #e34948; --c-private: #9a9a96;
 }}
 @media (prefers-color-scheme: dark) {{
   :root {{ --bg: #121214; --surface: #1C1C1F; --ink: #ECECEA; --ink-2: #A9A9B2;
-    --ink-3: #77777F; --line: #2C2C30; --accent: #6FB1D0; --accent-ink: #8FC5DE;
-    --good-bg: #1E2F23; --good-ink: #8CC79A; --lock-bg: #232326; }}
+    --ink-3: #77777F; --line: #2C2C30; --accent: #6FB1D0;
+    --good-bg: #1E2F23; --good-ink: #8CC79A; --lock-bg: #232326;
+    --c-overview: #3987e5; --c-structure: #199e70; --c-history: #c98500;
+    --c-decisions: #9085e9; --c-personal: #e66767; --c-private: #6e6e74; }}
 }}
 * {{ box-sizing: border-box; margin: 0; }}
 body {{ background: var(--bg); color: var(--ink); font: 16px/1.6 ui-sans-serif,
   system-ui, "Segoe UI", sans-serif; padding: 0 16px 80px; }}
-main {{ max-width: 880px; margin: 0 auto; }}
-header {{ padding: 48px 0 8px; }}
+main {{ max-width: 960px; margin: 0 auto; }}
+header {{ padding: 40px 0 8px; }}
 h1 {{ font-size: 28px; letter-spacing: -0.02em; }}
 h2 {{ font-size: 20px; margin: 40px 0 12px; letter-spacing: -0.01em; }}
-p.lede {{ color: var(--ink-2); max-width: 64ch; }}
+p.lede {{ color: var(--ink-2); max-width: 68ch; }}
+.map-wrap {{ display: grid; grid-template-columns: 1fr 300px; gap: 12px;
+  margin-top: 16px; }}
+@media (max-width: 760px) {{ .map-wrap {{ grid-template-columns: 1fr; }} }}
+#map-card {{ background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; overflow: hidden; position: relative; }}
+#brainmap {{ display: block; width: 100%; height: 480px; cursor: grab; }}
+#map-hint {{ position: absolute; left: 12px; bottom: 10px; font-size: 12.5px;
+  color: var(--ink-3); pointer-events: none; }}
+.legend {{ display: flex; flex-wrap: wrap; gap: 10px 16px; padding: 10px 14px;
+  border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-2); }}
+.legend span {{ display: inline-flex; align-items: center; gap: 6px; }}
+.dot {{ width: 11px; height: 11px; border-radius: 50%; display: inline-block; }}
+#panel {{ background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; padding: 16px; font-size: 14.5px; align-self: start;
+  position: sticky; top: 12px; }}
+#panel h3 {{ font-size: 16px; margin-bottom: 6px; }}
+#panel .meta {{ color: var(--ink-3); font-size: 12.5px; }}
+#panel p {{ margin-top: 8px; color: var(--ink-2); }}
+#panel a {{ color: var(--accent); }}
 .tiles {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr));
   gap: 12px; margin-top: 16px; }}
 .tile {{ background: var(--surface); border: 1px solid var(--line);
@@ -250,15 +329,11 @@ p.lede {{ color: var(--ink-2); max-width: 64ch; }}
 .card {{ background: var(--surface); border: 1px solid var(--line);
   border-radius: 10px; padding: 18px 20px; margin-top: 12px; }}
 .flow {{ display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
-  font-size: 14.5px; color: var(--ink-2); }}
+  font-size: 14.5px; color: var(--ink-2); margin-top: 8px; }}
 .flow b {{ color: var(--ink); font-weight: 600; }}
 .flow .arrow {{ color: var(--ink-3); }}
 .pill {{ display: inline-block; background: var(--lock-bg); border-radius: 999px;
   padding: 2px 10px; font-size: 13px; color: var(--ink-2); margin: 2px 4px 2px 0; }}
-.badge-public, .badge-private {{ font-size: 11.5px; border-radius: 4px;
-  padding: 1px 6px; vertical-align: 1px; }}
-.badge-public {{ background: var(--good-bg); color: var(--good-ink); }}
-.badge-private {{ background: var(--lock-bg); color: var(--ink-3); }}
 ul {{ padding-left: 22px; }}
 table {{ border-collapse: collapse; width: 100%; font-size: 14.5px; }}
 th, td {{ text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); }}
@@ -286,66 +361,83 @@ footer {{ margin-top: 48px; color: var(--ink-3); font-size: 13px; }}
 <body>
 <main>
 <header>
-  <h1>🧠 Optimus Brain — public showcase</h1>
+  <h1>🧠 Optimus Brain — interactive map</h1>
   <p class="lede">Optimus is the persistent memory layer behind
-  <strong>Aegis Finance</strong>: a file-based "brain" of markdown knowledge
-  pages with a SQLite index, deterministic (LLM-free) retrieval, and MCP tools
-  that AI sessions — Claude, DeepSeek, or any agent — consult instead of
-  re-reading a whole repository. This page is a <strong>read-only window</strong>
-  into it. All content is English. Personal pages (identity, dispositions,
-  private projects) are excluded — only aggregate counts appear.</p>
+  <strong>Aegis Finance</strong>. Everything it knows lives in small markdown
+  "pages" connected by links — this map shows all of them. <strong>Each bubble
+  is one page</strong>; its size is how many verified facts (claims) it holds,
+  its color is what kind of page it is, and lines connect related pages.
+  Gray bubbles are private (personal) pages — you can see they exist, never
+  what's inside. Click any bubble to learn what it does. All content is
+  English.</p>
 </header>
+
+<h2>The brain, mapped</h2>
+<div class="map-wrap">
+  <div id="map-card">
+    <canvas id="brainmap"></canvas>
+    <div id="map-hint">drag bubbles · click for details</div>
+    <div class="legend">
+      <span><i class="dot" style="background:var(--c-overview)"></i>overview</span>
+      <span><i class="dot" style="background:var(--c-structure)"></i>structure</span>
+      <span><i class="dot" style="background:var(--c-history)"></i>history</span>
+      <span><i class="dot" style="background:var(--c-decisions)"></i>decisions</span>
+      <span><i class="dot" style="background:var(--c-personal)"></i>identity/disposition</span>
+      <span><i class="dot" style="background:var(--c-private)"></i>private (anonymized)</span>
+    </div>
+  </div>
+  <aside id="panel">
+    <h3>Click a bubble</h3>
+    <p>Every bubble is one knowledge page. Bigger bubble = more verified facts
+    inside. The two clusters on the map are the public Aegis projects; the
+    gray bubbles are the private rest of the brain.</p>
+  </aside>
+</div>
 
 <h2>How it digests information</h2>
 <div class="card">
-  <div class="flow">
-    <b>ingest</b><span class="arrow">→</span>
-    <span>git repos &amp; folders become typed pages (overview / structure / history / decisions) with provenance-cited claims</span>
-  </div>
-  <div class="flow" style="margin-top:8px">
-    <b>index</b><span class="arrow">→</span>
-    <span>pages, claims, aliases and edges land in one SQLite index; every operation appends to an event log</span>
-  </div>
-  <div class="flow" style="margin-top:8px">
-    <b>retrieve</b><span class="arrow">→</span>
-    <span>queries are scored deterministically (intent + alias + term overlap) — no model call, snapshot-testable, always cited</span>
-  </div>
-  <div class="flow" style="margin-top:8px">
-    <b>serve</b><span class="arrow">→</span>
-    <span>MCP tools (<code>brain_query</code>, <code>aegis_verified_state</code>, <code>aegis_registry</code>, <code>aegis_postmortems</code>) feed AI sessions verified project state</span>
-  </div>
+  <div class="flow"><b>1 · ingest</b><span class="arrow">→</span>
+    <span>git repos &amp; folders are read and turned into typed pages
+    (overview / structure / history / decisions), each fact cited back to its
+    source</span></div>
+  <div class="flow"><b>2 · index</b><span class="arrow">→</span>
+    <span>pages, facts, name-aliases and links land in one SQLite index;
+    every operation is logged</span></div>
+  <div class="flow"><b>3 · retrieve</b><span class="arrow">→</span>
+    <span>questions are answered by deterministic scoring (no AI guessing at
+    this step — same question, same answer, always cited)</span></div>
+  <div class="flow"><b>4 · serve</b><span class="arrow">→</span>
+    <span>AI sessions (Claude, DeepSeek, any agent) consult it through MCP
+    tools like <code>brain_query</code> instead of re-reading whole
+    repositories</span></div>
   <p style="margin-top:10px; color: var(--ink-2); font-size: 14px;">
-  Ingest operations recorded so far: {ingest_html}</p>
+  Operations recorded so far: {ingest_html}</p>
 </div>
 
 <h2>Corpus at a glance</h2>
 <div class="tiles">{tile_html}</div>
-<div class="card">
-  <p style="font-size:14px; color: var(--ink-2); margin-bottom: 8px;">
-  Pages by project (private projects are counted, never shown):</p>
-  <ul>{proj_html}</ul>
-</div>
 
 <h2>Retrieval, demonstrated (real output)</h2>
 <div class="card">
   <p style="font-size:14px; color: var(--ink-2);">Each query below was run
-  through the actual retrieval engine at build time. 🔒 marks a private page —
-  it can be <em>found</em>, but its content is never exported here.</p>
+  through the actual retrieval engine at build time. Higher score = better
+  match. 🔒 marks a private page — it can be <em>found</em>, but its content
+  is never exported here.</p>
   {demos_html}
 </div>
 
-<h2>Public knowledge pages</h2>
+<h2>Public knowledge pages (full text)</h2>
 {pages_html}
 
 <h2>For AI agents</h2>
 <div class="card">
   <p>Everything public on this page is machine-readable, English, CORS-open:</p>
   <ul>
-    <li><code>GET /brain.json</code> — stats, public pages (full markdown), retrieval demos</li>
+    <li><code>GET /brain.json</code> — stats, graph, public pages (full markdown), retrieval demos</li>
     <li><code>GET /llms.txt</code> — plain-text index of what is here and how to use it</li>
     <li><code>GET /pages/&lt;id&gt;.md</code> — each public page raw</li>
   </ul>
-  <pre><code>curl -s https://&lt;this-host&gt;/brain.json | jq '.stats'</code></pre>
+  <pre><code>curl -s https://optimus-brain-alpha.vercel.app/brain.json | jq '.stats'</code></pre>
   <p style="font-size:14px; color: var(--ink-2);">This export is a static
   snapshot — it changes only when the showcase is rebuilt, and the build ONLY
   reads the brain (the store is opened read-only).</p>
@@ -356,6 +448,200 @@ footer {{ margin-top: 48px; color: var(--ink-3); font-size: 13px; }}
   Optimus is read-only here; the live brain runs locally with Aegis Finance.
 </footer>
 </main>
+
+<script>
+const GRAPH = {graph_json};
+const TYPE_EXPLAIN = {type_explain_json};
+
+const canvas = document.getElementById("brainmap");
+const panel = document.getElementById("panel");
+const ctx = canvas.getContext("2d");
+const css = (v) => getComputedStyle(document.documentElement)
+  .getPropertyValue(v).trim();
+
+function typeColor(n) {{
+  if (!n.public) return css("--c-private");
+  if (n.type === "overview") return css("--c-overview");
+  if (n.type === "structure") return css("--c-structure");
+  if (n.type === "history") return css("--c-history");
+  if (n.type === "decisions") return css("--c-decisions");
+  return css("--c-personal");
+}}
+
+// layout state
+let W = 0, H = 0, DPR = 1;
+const nodes = GRAPH.nodes.map((n, i) => ({{
+  ...n,
+  r: 10 + Math.sqrt(n.claims || 0) * 3.2,
+  x: 0, y: 0, vx: 0, vy: 0, seed: i
+}}));
+const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
+const links = GRAPH.links
+  .map(l => ({{ s: byId[l.source], t: byId[l.target] }}))
+  .filter(l => l.s && l.t);
+
+function resize() {{
+  DPR = window.devicePixelRatio || 1;
+  W = canvas.clientWidth; H = 480;
+  canvas.width = W * DPR; canvas.height = H * DPR;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}}
+resize();
+window.addEventListener("resize", resize);
+
+// deterministic initial placement: ring by index, public cluster left
+nodes.forEach((n, i) => {{
+  const a = (i / nodes.length) * Math.PI * 2;
+  const cx = n.public ? 0.36 : 0.66;
+  n.x = W * cx + Math.cos(a) * 90 + (i % 3) * 7;
+  n.y = H * 0.5 + Math.sin(a) * 120 + (i % 5) * 5;
+}});
+
+let dragging = null, hover = null, alpha = 1;
+
+function step() {{
+  // forces: repulsion, springs on links, mild center gravity
+  for (let i = 0; i < nodes.length; i++) {{
+    const a = nodes[i];
+    for (let j = i + 1; j < nodes.length; j++) {{
+      const b = nodes[j];
+      let dx = b.x - a.x, dy = b.y - a.y;
+      let d2 = dx * dx + dy * dy || 1;
+      const min = (a.r + b.r + 14);
+      const f = Math.min(2600 / d2, 0.9) + (d2 < min * min ? 0.6 : 0);
+      const d = Math.sqrt(d2);
+      dx /= d; dy /= d;
+      a.vx -= dx * f; a.vy -= dy * f;
+      b.vx += dx * f; b.vy += dy * f;
+    }}
+    // gravity toward own cluster center
+    const gx = W * (a.public ? 0.36 : 0.68), gy = H * 0.5;
+    a.vx += (gx - a.x) * 0.004; a.vy += (gy - a.y) * 0.004;
+  }}
+  for (const l of links) {{
+    let dx = l.t.x - l.s.x, dy = l.t.y - l.s.y;
+    const d = Math.sqrt(dx * dx + dy * dy) || 1;
+    const want = l.s.r + l.t.r + 46;
+    const f = (d - want) * 0.012;
+    dx /= d; dy /= d;
+    l.s.vx += dx * f * d * 0.02; l.s.vy += dy * f * d * 0.02;
+    l.t.vx -= dx * f * d * 0.02; l.t.vy -= dy * f * d * 0.02;
+  }}
+  for (const n of nodes) {{
+    if (n === dragging) {{ n.vx = 0; n.vy = 0; continue; }}
+    n.vx *= 0.86; n.vy *= 0.86;
+    n.x += n.vx * alpha; n.y += n.vy * alpha;
+    n.x = Math.max(n.r + 4, Math.min(W - n.r - 4, n.x));
+    n.y = Math.max(n.r + 4, Math.min(H - n.r - 4, n.y));
+  }}
+}}
+
+function draw() {{
+  ctx.clearRect(0, 0, W, H);
+  ctx.lineWidth = 1.4;
+  ctx.strokeStyle = css("--line");
+  for (const l of links) {{
+    ctx.beginPath(); ctx.moveTo(l.s.x, l.s.y); ctx.lineTo(l.t.x, l.t.y);
+    ctx.stroke();
+  }}
+  const ink = css("--ink"), ink3 = css("--ink-3"), surface = css("--surface");
+  for (const n of nodes) {{
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+    ctx.fillStyle = typeColor(n);
+    ctx.globalAlpha = n.public ? 0.92 : 0.55;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    // 2px surface ring so overlapping bubbles stay separable
+    ctx.lineWidth = 2; ctx.strokeStyle = surface; ctx.stroke();
+    if (n === hover) {{
+      ctx.lineWidth = 2.5; ctx.strokeStyle = ink; ctx.stroke();
+    }}
+  }}
+  // labels for public bubbles (text in ink, never series color)
+  ctx.font = "12px ui-sans-serif, system-ui";
+  ctx.textAlign = "center";
+  for (const n of nodes) {{
+    if (!n.public) continue;
+    const label = n.id.replace("aegis-finance-", "").replace(
+      "aegis-quant-knowledge-", "quant-");
+    ctx.fillStyle = ink;
+    ctx.fillText(label, n.x, n.y + n.r + 14);
+  }}
+  ctx.fillStyle = ink3;
+  ctx.fillText("public: Aegis projects", W * 0.36, 20);
+  ctx.fillText("private (anonymized)", W * 0.68, 20);
+}}
+
+function loop() {{ step(); draw(); requestAnimationFrame(loop); }}
+loop();
+
+function nodeAt(x, y) {{
+  for (let i = nodes.length - 1; i >= 0; i--) {{
+    const n = nodes[i];
+    const dx = x - n.x, dy = y - n.y;
+    if (dx * dx + dy * dy <= (n.r + 4) * (n.r + 4)) return n;
+  }}
+  return null;
+}}
+function pos(e) {{
+  const r = canvas.getBoundingClientRect();
+  const p = e.touches ? e.touches[0] : e;
+  return [p.clientX - r.left, p.clientY - r.top];
+}}
+
+canvas.addEventListener("mousemove", (e) => {{
+  const [x, y] = pos(e);
+  if (dragging) {{ dragging.x = x; dragging.y = y; return; }}
+  hover = nodeAt(x, y);
+  canvas.style.cursor = hover ? "pointer" : "grab";
+}});
+canvas.addEventListener("mousedown", (e) => {{
+  const [x, y] = pos(e);
+  dragging = nodeAt(x, y);
+}});
+window.addEventListener("mouseup", () => {{ dragging = null; }});
+canvas.addEventListener("click", (e) => {{
+  const [x, y] = pos(e);
+  const n = nodeAt(x, y);
+  if (n) showPanel(n);
+}});
+canvas.addEventListener("touchstart", (e) => {{
+  const [x, y] = pos(e);
+  const n = nodeAt(x, y);
+  if (n) showPanel(n);
+}}, {{ passive: true }});
+
+function esc(s) {{
+  const d = document.createElement("div");
+  d.textContent = s == null ? "" : String(s);
+  return d.innerHTML;
+}}
+
+function showPanel(n) {{
+  const explain = TYPE_EXPLAIN[n.type] || "A knowledge page.";
+  const conn = links.filter(l => l.s === n || l.t === n).length;
+  if (n.public) {{
+    panel.innerHTML =
+      "<h3>" + esc(n.title) + "</h3>" +
+      '<div class="meta">' + esc(n.project) + " · " + esc(n.type) +
+      " · " + n.claims + " verified fact" + (n.claims === 1 ? "" : "s") +
+      " · " + conn + " link" + (conn === 1 ? "" : "s") + "</div>" +
+      "<p>" + esc(explain) + "</p>" +
+      '<p><a href="#page-' + esc(n.id) + '" onclick="document.getElementById(' +
+      "'page-" + esc(n.id) + "'" + ').open = true">Read the full page below ↓</a></p>';
+  }} else {{
+    panel.innerHTML =
+      "<h3>🔒 Private page</h3>" +
+      '<div class="meta">' + esc(n.project || "personal") + " · " + esc(n.type) +
+      " · " + n.claims + " fact" + (n.claims === 1 ? "" : "s") + "</div>" +
+      "<p>" + esc(explain) + "</p>" +
+      "<p>Private pages exist on the map so you can see the brain's true " +
+      "shape — but their titles and contents are excluded from this export " +
+      "by construction.</p>";
+  }}
+}}
+</script>
 </body>
 </html>
 """
@@ -369,6 +655,7 @@ def main() -> None:
     stats = corpus_stats(conn)
     pages = public_pages(conn)
     demos = demo_retrievals(store)
+    graph = graph_data(conn)
     commit = brain_commit()
 
     OUT.mkdir(parents=True, exist_ok=True)
@@ -380,15 +667,17 @@ def main() -> None:
     brain_json = {
         "what": "Public read-only snapshot of the Optimus brain (memory layer "
                 "behind Aegis Finance). English-only. Private pages excluded; "
-                "they appear only as counts.",
+                "they appear only as anonymized graph nodes and counts.",
         "built_at": built_at, "brain_commit": commit,
         "stats": stats,
+        "graph": graph,
         "public_pages": pages,
         "retrieval_demos": demos,
         "how_to_use": {
             "for_ai_agents": "Fetch this file. `public_pages[*].markdown` is "
-                             "the full knowledge text. Answer questions from "
-                             "it in English; cite page ids.",
+                             "the full knowledge text. `graph` is the page map "
+                             "(private nodes anonymized). Answer questions "
+                             "from it in English; cite page ids.",
             "raw_pages": "GET /pages/<id>.md",
         },
     }
@@ -399,11 +688,12 @@ def main() -> None:
             f"# built {built_at} · brain @ {commit}", "",
             "This host is a read-only export of the Optimus memory layer",
             "behind Aegis Finance. Machine endpoints:", "",
-            "  /brain.json      full public snapshot (stats + pages + demos)",
+            "  /brain.json      full public snapshot (stats + graph + pages + demos)",
             "  /pages/<id>.md   raw public knowledge pages:", ""]
     llms += [f"    /pages/{p['id']}.md  — {p['title']}" for p in pages]
     llms += ["", "Private content (identity, dispositions, personal projects)",
-             "is excluded by construction — only aggregate counts exist here."]
+             "is excluded by construction — anonymized graph nodes and",
+             "aggregate counts only."]
     (OUT / "llms.txt").write_text("\n".join(llms), encoding="utf-8")
 
     (OUT / "vercel.json").write_text(json.dumps({
@@ -417,11 +707,13 @@ def main() -> None:
     }, indent=1), encoding="utf-8")
 
     (OUT / "index.html").write_text(
-        render_html(stats, pages, demos, commit, built_at), encoding="utf-8")
+        render_html(stats, pages, demos, graph, commit, built_at),
+        encoding="utf-8")
 
     store.close()
     print(f"showcase built -> {OUT}")
     print(f"  pages exported: {[p['id'] for p in pages]}")
+    print(f"  graph: {len(graph['nodes'])} nodes / {len(graph['links'])} links")
     print(f"  stats: {stats['pages']} pages / {stats['claims']} claims")
 
 

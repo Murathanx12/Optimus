@@ -126,6 +126,7 @@ def graph_data(conn: sqlite3.Connection) -> dict:
                       "public": public})
 
     node_ids = {n["id"] for n in nodes}
+    public_ids = {n["id"] for n in nodes if n["public"]}
 
     def _pid(raw: str) -> str | None:
         if raw in node_ids:
@@ -137,6 +138,28 @@ def graph_data(conn: sqlite3.Connection) -> dict:
         s, d = _pid(e["src_page_id"]), _pid(e["dst_page_id"])
         if s and d:
             links.append({"source": s, "target": d, "rel": e["rel"]})
+
+    # Claims as satellite neurons: every verified fact orbits its page.
+    # Public pages expose the claim text; private pages contribute anonymous
+    # dots (the brain's true density shows, content never does).
+    # Claim node ids are ORDINAL, never the raw claim id — the claims table
+    # uses semantic string ids that embed private project names.
+    claim_rows = conn.execute(
+        "SELECT id, page_id, text FROM claims WHERE status='active' ORDER BY id"
+    ).fetchall()
+    for i, c in enumerate(claim_rows):
+        parent = _pid(c["page_id"])
+        if parent is None:
+            continue
+        public = parent in public_ids
+        cid = f"fact-{i + 1}"
+        nodes.append({
+            "id": cid, "kind": "claim", "parent": parent, "public": public,
+            "text": sanitize(c["text"] or "")[:280] if public else None,
+        })
+        links.append({"source": parent, "target": cid, "rel": "claim"})
+    for n in nodes:
+        n.setdefault("kind", "page")
     return {"nodes": nodes, "links": links}
 
 
@@ -363,13 +386,13 @@ footer {{ margin-top: 48px; color: var(--ink-3); font-size: 13px; }}
 <header>
   <h1>🧠 Optimus Brain — interactive map</h1>
   <p class="lede">Optimus is the persistent memory layer behind
-  <strong>Aegis Finance</strong>. Everything it knows lives in small markdown
-  "pages" connected by links — this map shows all of them. <strong>Each bubble
-  is one page</strong>; its size is how many verified facts (claims) it holds,
-  its color is what kind of page it is, and lines connect related pages.
-  Gray bubbles are private (personal) pages — you can see they exist, never
-  what's inside. Click any bubble to learn what it does. All content is
-  English.</p>
+  <strong>Aegis Finance</strong>. Everything it knows lives in markdown
+  "pages" connected by links — this map shows the whole brain. <strong>Big
+  bubbles are pages</strong> (color = page type); <strong>every small dot
+  orbiting a page is one verified fact</strong> it holds, and the moving
+  pulses trace how retrieval walks the links. Gray means private — you can
+  see those neurons exist, never what's inside. Click anything: pages explain
+  themselves, public facts show their text. All content is English.</p>
 </header>
 
 <h2>The brain, mapped</h2>
@@ -460,6 +483,10 @@ const css = (v) => getComputedStyle(document.documentElement)
   .getPropertyValue(v).trim();
 
 function typeColor(n) {{
+  if (n.kind === "claim") {{
+    const parent = byId[n.parent];
+    return parent ? typeColor(parent) : css("--c-private");
+  }}
   if (!n.public) return css("--c-private");
   if (n.type === "overview") return css("--c-overview");
   if (n.type === "structure") return css("--c-structure");
@@ -472,12 +499,12 @@ function typeColor(n) {{
 let W = 0, H = 0, DPR = 1;
 const nodes = GRAPH.nodes.map((n, i) => ({{
   ...n,
-  r: 10 + Math.sqrt(n.claims || 0) * 3.2,
+  r: n.kind === "claim" ? 3.5 : 10 + Math.sqrt(n.claims || 0) * 3.2,
   x: 0, y: 0, vx: 0, vy: 0, seed: i
 }}));
 const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
 const links = GRAPH.links
-  .map(l => ({{ s: byId[l.source], t: byId[l.target] }}))
+  .map(l => ({{ s: byId[l.source], t: byId[l.target], rel: l.rel }}))
   .filter(l => l.s && l.t);
 
 function resize() {{
@@ -489,12 +516,19 @@ function resize() {{
 resize();
 window.addEventListener("resize", resize);
 
-// deterministic initial placement: ring by index, public cluster left
-nodes.forEach((n, i) => {{
-  const a = (i / nodes.length) * Math.PI * 2;
+// deterministic initial placement: pages on a ring (public cluster left),
+// claims scattered around their parent page
+nodes.filter(n => n.kind === "page").forEach((n, i, pages) => {{
+  const a = (i / pages.length) * Math.PI * 2;
   const cx = n.public ? 0.36 : 0.66;
   n.x = W * cx + Math.cos(a) * 90 + (i % 3) * 7;
   n.y = H * 0.5 + Math.sin(a) * 120 + (i % 5) * 5;
+}});
+nodes.filter(n => n.kind === "claim").forEach((n, i) => {{
+  const p = byId[n.parent];
+  const a = (i * 2.399963) % (Math.PI * 2); // golden angle scatter
+  n.x = (p ? p.x : W / 2) + Math.cos(a) * 34;
+  n.y = (p ? p.y : H / 2) + Math.sin(a) * 34;
 }});
 
 let dragging = null, hover = null, alpha = 1;
@@ -507,21 +541,28 @@ function step() {{
       const b = nodes[j];
       let dx = b.x - a.x, dy = b.y - a.y;
       let d2 = dx * dx + dy * dy || 1;
-      const min = (a.r + b.r + 14);
-      const f = Math.min(2600 / d2, 0.9) + (d2 < min * min ? 0.6 : 0);
+      const min = (a.r + b.r + (a.kind === "claim" || b.kind === "claim" ? 4 : 14));
+      // tiny claim nodes repel weakly; pages keep their spacing
+      const scale = (a.kind === "claim" ? 0.18 : 1) * (b.kind === "claim" ? 0.18 : 1);
+      const f = Math.min(2600 * scale / d2, 0.9) + (d2 < min * min ? 0.5 : 0);
       const d = Math.sqrt(d2);
       dx /= d; dy /= d;
       a.vx -= dx * f; a.vy -= dy * f;
       b.vx += dx * f; b.vy += dy * f;
     }}
-    // gravity toward own cluster center
-    const gx = W * (a.public ? 0.36 : 0.68), gy = H * 0.5;
-    a.vx += (gx - a.x) * 0.004; a.vy += (gy - a.y) * 0.004;
+    // gravity: pages toward their cluster; claims toward their parent
+    if (a.kind === "claim") {{
+      const p = byId[a.parent];
+      if (p) {{ a.vx += (p.x - a.x) * 0.02; a.vy += (p.y - a.y) * 0.02; }}
+    }} else {{
+      const gx = W * (a.public ? 0.36 : 0.68), gy = H * 0.5;
+      a.vx += (gx - a.x) * 0.004; a.vy += (gy - a.y) * 0.004;
+    }}
   }}
   for (const l of links) {{
     let dx = l.t.x - l.s.x, dy = l.t.y - l.s.y;
     const d = Math.sqrt(dx * dx + dy * dy) || 1;
-    const want = l.s.r + l.t.r + 46;
+    const want = l.rel === "claim" ? l.s.r + 26 : l.s.r + l.t.r + 46;
     const f = (d - want) * 0.012;
     dx /= d; dy /= d;
     l.s.vx += dx * f * d * 0.02; l.s.vy += dy * f * d * 0.02;
@@ -536,33 +577,56 @@ function step() {{
   }}
 }}
 
-function draw() {{
+function draw(now) {{
   ctx.clearRect(0, 0, W, H);
-  ctx.lineWidth = 1.4;
-  ctx.strokeStyle = css("--line");
+  const ink = css("--ink"), ink3 = css("--ink-3"), surface = css("--surface");
+
+  ctx.lineWidth = 1.1;
   for (const l of links) {{
+    ctx.strokeStyle = css("--line");
+    ctx.globalAlpha = l.rel === "claim" ? 0.55 : 1;
     ctx.beginPath(); ctx.moveTo(l.s.x, l.s.y); ctx.lineTo(l.t.x, l.t.y);
     ctx.stroke();
+    ctx.globalAlpha = 1;
   }}
-  const ink = css("--ink"), ink3 = css("--ink-3"), surface = css("--surface");
+
+  // signal pulses traveling along the links — the "thinking" effect
+  for (let i = 0; i < links.length; i++) {{
+    const l = links[i];
+    const period = l.rel === "claim" ? 4200 : 2600;
+    const phase = ((now / period) + i * 0.37) % 1;
+    const px = l.s.x + (l.t.x - l.s.x) * phase;
+    const py = l.s.y + (l.t.y - l.s.y) * phase;
+    ctx.beginPath();
+    ctx.arc(px, py, l.rel === "claim" ? 1.3 : 2.1, 0, Math.PI * 2);
+    ctx.fillStyle = typeColor(l.t);
+    ctx.globalAlpha = 0.7 * Math.sin(phase * Math.PI);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }}
+
   for (const n of nodes) {{
     ctx.beginPath();
     ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
     ctx.fillStyle = typeColor(n);
-    ctx.globalAlpha = n.public ? 0.92 : 0.55;
+    ctx.globalAlpha = n.kind === "claim"
+      ? (n.public ? 0.75 : 0.35)
+      : (n.public ? 0.92 : 0.55);
     ctx.fill();
     ctx.globalAlpha = 1;
-    // 2px surface ring so overlapping bubbles stay separable
-    ctx.lineWidth = 2; ctx.strokeStyle = surface; ctx.stroke();
+    if (n.kind !== "claim") {{
+      // 2px surface ring so overlapping bubbles stay separable
+      ctx.lineWidth = 2; ctx.strokeStyle = surface; ctx.stroke();
+    }}
     if (n === hover) {{
       ctx.lineWidth = 2.5; ctx.strokeStyle = ink; ctx.stroke();
     }}
   }}
-  // labels for public bubbles (text in ink, never series color)
+  // labels for public PAGE bubbles (text in ink, never series color)
   ctx.font = "12px ui-sans-serif, system-ui";
   ctx.textAlign = "center";
   for (const n of nodes) {{
-    if (!n.public) continue;
+    if (!n.public || n.kind === "claim") continue;
     const label = n.id.replace("aegis-finance-", "").replace(
       "aegis-quant-knowledge-", "quant-");
     ctx.fillStyle = ink;
@@ -573,8 +637,8 @@ function draw() {{
   ctx.fillText("private (anonymized)", W * 0.68, 20);
 }}
 
-function loop() {{ step(); draw(); requestAnimationFrame(loop); }}
-loop();
+function loop(now) {{ step(); draw(now || 0); requestAnimationFrame(loop); }}
+requestAnimationFrame(loop);
 
 function nodeAt(x, y) {{
   for (let i = nodes.length - 1; i >= 0; i--) {{
@@ -619,8 +683,26 @@ function esc(s) {{
 }}
 
 function showPanel(n) {{
+  if (n.kind === "claim") {{
+    const parent = byId[n.parent];
+    if (n.public && n.text) {{
+      panel.innerHTML =
+        "<h3>Verified fact</h3>" +
+        '<div class="meta">from ' + esc(parent ? parent.title : n.parent) + "</div>" +
+        "<p>“" + esc(n.text) + "”</p>" +
+        "<p style='font-size:13px'>Every small dot is one fact the brain " +
+        "holds, cited back to its source at ingest time.</p>";
+    }} else {{
+      panel.innerHTML =
+        "<h3>🔒 Private fact</h3>" +
+        "<p>A verified fact inside a private page — it exists on the map so " +
+        "the brain's density is honest, but its content never leaves the " +
+        "local machine.</p>";
+    }}
+    return;
+  }}
   const explain = TYPE_EXPLAIN[n.type] || "A knowledge page.";
-  const conn = links.filter(l => l.s === n || l.t === n).length;
+  const conn = links.filter(l => l.rel !== "claim" && (l.s === n || l.t === n)).length;
   if (n.public) {{
     panel.innerHTML =
       "<h3>" + esc(n.title) + "</h3>" +

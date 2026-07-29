@@ -103,6 +103,15 @@ Rule: **observed behavior outranks stated preference.** If he says "I prefer X" 
 | `audit` | monthly / `optimus audit` | report only, no auto-fix |
 | `deprecate` | `optimus deprecate "<entity>"` or MCP request | tombstone + every referencing page marked deprecated |
 
+**`query` abstains.** It returns nothing unless a page clears the relevance floor
+(`core.query.FLOOR_SCORE`, calibrated in a comment there), and says `no_match`
+with the floor and the best rejected candidates instead of handing back the
+nearest document. It also scopes by **domain** (`core/domains.py`): a robotics
+page cannot answer a finance question, and the dead V5/V7 ancestor engines can
+never out-rank the live program. Both were added 2026-07-29 after an audit
+measured an FRC robotics file returned at score 4.0 for a finance methodology
+query. See `docs/REINGEST.md` for the scope semantics and the re-ingest command.
+
 ### 4.5 `deprecate` — the operation that makes this more than a wiki (the "buzzer fix")
 The motivating bug: a hardware component (a buzzer) was removed from a project, but references to it persisted across multiple docs and pages and kept resurfacing. `deprecate` fixes that class of problem:
 1. Resolve aliases → canonical entity + all aliases.

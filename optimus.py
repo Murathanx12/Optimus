@@ -38,8 +38,13 @@ def cmd_ingest(args: argparse.Namespace) -> int:
 
 def cmd_query(args: argparse.Namespace) -> int:
     with Store(args.root) as store:
-        result = retrieve(store, args.text, k=args.k)
+        result = retrieve(store, args.text, k=args.k,
+                          domain=args.domain, floor=args.floor)
         print(format_answer(store, result))
+    # Exit 2 = explicit abstention (below the relevance floor), distinct from
+    # 1 = nothing scored at all. Both are "no answer"; only 2 had candidates.
+    if result.abstained:
+        return 2
     return 0 if result.pages else 1
 
 
@@ -110,6 +115,12 @@ def main(argv: list[str] | None = None) -> int:
     p_query = sub.add_parser("query", help="retrieve brain pages for a question (LLM-free)")
     p_query.add_argument("text", help="the question, e.g. \"what is Aegis\"")
     p_query.add_argument("-k", type=int, default=3, help="max pages to return (default 3)")
+    p_query.add_argument("--domain", metavar="D",
+                         help="hard-scope the corpus: finance | finance-ancestor | "
+                              "robotics | art | school | personal | core "
+                              "(omit to infer from the query, demote-only)")
+    p_query.add_argument("--floor", type=float, metavar="X",
+                         help="override the relevance floor (default 20.0)")
     p_query.set_defaults(func=cmd_query)
 
     p_dep = sub.add_parser("deprecate", help="deprecate an entity across every reference")

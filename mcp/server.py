@@ -149,19 +149,31 @@ def aegis_postmortems(query: str = "", limit: int = 3) -> str:
 
 
 @server.tool()
-def brain_query(query: str, k: int = 3) -> str:
+def brain_query(
+    query: str, k: int = 3, domain: str | None = None, floor: float | None = None
+) -> str:
     """Query the Optimus brain corpus (markdown pages + SQLite index,
     read-only): project state, decisions, identity-safe context. Returns a
-    cited answer plus the matched page list."""
+    cited answer plus a JSON result block.
+
+    THIS TOOL ABSTAINS. If nothing scores at or above the relevance floor it
+    returns status `no_match` — with the floor and the best rejected candidates
+    — instead of the nearest document. `no_match` means "not in the brain", not
+    "retrieval is broken": fall back to aegis_canon / aegis_registry /
+    aegis_postmortems, which read live from Aegis.
+
+    domain: optional corpus scope — 'finance', 'finance-ancestor', 'robotics',
+    'art', 'school', 'personal', 'core'. Passing it HARD-scopes: pages in other
+    registered domains are dropped, and related/ancestor/unregistered pages are
+    demoted below in-domain ones. Omitting it soft-scopes from query wording
+    (nothing is dropped; out-of-domain pages are only demoted).
+    floor: override the relevance floor (default 20.0) — lower it to inspect
+    near-misses."""
     store = Store(_OPTIMUS_ROOT, read_only=True)
     try:
-        result = retrieve(store, query, k=int(k))
+        result = retrieve(store, query, k=int(k), domain=domain, floor=floor)
         answer = format_answer(store, result)
-        pages = [
-            {"id": p.page_id, "title": p.title, "score": round(p.score, 3)}
-            for p in result.pages
-        ]
-        return answer + "\n\nmatched: " + json.dumps(pages)
+        return answer + "\n\nresult: " + json.dumps(result.as_dict())
     finally:
         close = getattr(store, "close", None)
         if close:

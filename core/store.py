@@ -32,16 +32,38 @@ from .schema import (
 
 
 class Store:
-    def __init__(self, root: str | Path):
+    def __init__(self, root: str | Path, read_only: bool = False):
         self.root = Path(root)
         self.brain = self.root / "brain"
         self.db_path = self.brain / "index.db"
+        self.read_only = read_only
+        if read_only:
+            # A pure view surface (e.g. the local web UI) opens the brain strictly
+            # read-only: the SQLite handle is mode=ro (the OS forbids any write),
+            # no markdown is touched, and every write method below raises. mode=ro
+            # also refuses to create a missing db — the brain must already exist.
+            if not self.db_path.exists():
+                raise FileNotFoundError(f"no brain index at {self.db_path}")
+            # check_same_thread=False: a read-only viewer may serve requests from
+            # worker threads. Safe here because the connection is mode=ro (no writes
+            # to serialize) and callers serialize reads with their own lock.
+            self._conn = sqlite3.connect(
+                f"file:{self.db_path.as_posix()}?mode=ro", uri=True,
+                check_same_thread=False,
+            )
+            self._conn.row_factory = sqlite3.Row
+            return
         self.brain.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(self.db_path)
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA foreign_keys = ON")
         self._conn.executescript(DDL)
         self._conn.commit()
+
+    def _guard_ro(self) -> None:
+        """Refuse any write when opened read-only — the rail behind the view surface."""
+        if getattr(self, "read_only", False):
+            raise RuntimeError("Store opened read-only; writes are forbidden")
 
     # -- lifecycle ---------------------------------------------------------- #
     def close(self) -> None:
@@ -73,6 +95,7 @@ class Store:
     # -- page write/read ---------------------------------------------------- #
     def write_page(self, page: Page) -> Path:
         """Write a page to markdown and upsert its index row (source-of-truth first)."""
+        self._guard_ro()
         path = self.page_path(page)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(page.to_markdown(), encoding="utf-8")
@@ -176,6 +199,7 @@ class Store:
 
     # -- edges -------------------------------------------------------------- #
     def add_edge(self, src_page_id: str, dst_page_id: str, rel: str) -> None:
+        self._guard_ro()
         self._conn.execute(
             "INSERT OR IGNORE INTO edges (src_page_id, dst_page_id, rel, created) "
             "VALUES (?, ?, ?, ?)",
@@ -185,6 +209,8 @@ class Store:
 
     # -- events ------------------------------------------------------------- #
     def log_event(self, op: str, target: str | None = None, detail: dict | None = None) -> None:
+        if getattr(self, "read_only", False):
+            return  # view surface: never mutate the event log (lets audit() run clean)
         self._conn.execute(
             "INSERT INTO events (ts, op, target, detail) VALUES (?, ?, ?, ?)",
             (utcnow_iso(), op, target, json.dumps(detail or {})),
@@ -202,6 +228,7 @@ class Store:
         self, entity: str, aliases: list[str], reason: str,
         pages: list[str], created: str, source: str | None = None,
     ) -> None:
+        self._guard_ro()
         slug = re.sub(r"[^a-z0-9]+", "-", entity.lower()).strip("-")
         self._conn.execute(
             """
@@ -220,6 +247,7 @@ class Store:
         self._rewrite_tombstones_md()
 
     def remove_tombstone(self, entity: str) -> None:
+        self._guard_ro()
         slug = re.sub(r"[^a-z0-9]+", "-", entity.lower()).strip("-")
         self._conn.execute("DELETE FROM tombstones WHERE id = ?", (slug,))
         self._conn.commit()
@@ -308,6 +336,22 @@ class Store:
             "WHERE status = 'active' ORDER BY id"
         ).fetchall()
 
+    def all_pages_any_status(self) -> list[sqlite3.Row]:
+        """Every page regardless of status. The graph view shows deprecated/flagged
+        nodes struck-through rather than hiding them (CLAUDE.md §4.5)."""
+        return self._conn.execute(
+            "SELECT id, title, tier, type, project, path, status FROM pages "
+            "ORDER BY id"
+        ).fetchall()
+
+    def all_edges(self) -> list[sqlite3.Row]:
+        """All typed edges (part_of, supersedes, contradicts, references) for the
+        graph view — read-only counterpart to :meth:`add_edge`."""
+        return self._conn.execute(
+            "SELECT src_page_id, dst_page_id, rel, created FROM edges "
+            "ORDER BY src_page_id, dst_page_id, rel"
+        ).fetchall()
+
     def all_aliases(self) -> list[sqlite3.Row]:
         return self._conn.execute(
             "SELECT alias, page_id, canonical FROM aliases"
@@ -334,6 +378,7 @@ class Store:
         This is the proof that SQLite is derived: drop the index data and
         re-read every ``.md`` page under brain/.
         """
+        self._guard_ro()
         self._conn.execute("DELETE FROM aliases")
         self._conn.execute("DELETE FROM pages")
         count = 0

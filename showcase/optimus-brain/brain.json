@@ -1,0 +1,2180 @@
+{
+ "what": "Public read-only snapshot of the Optimus brain (memory layer behind Aegis Finance). English-only. Private pages excluded; they appear only as anonymized graph nodes and counts.",
+ "built_at": "2026-07-11 17:21 UTC",
+ "brain_commit": "5e712e5",
+ "stats": {
+  "pages": 20,
+  "claims": 148,
+  "aliases": 60,
+  "edges": 9,
+  "last_updated": "2026-07-10T16:19:00+00:00",
+  "pages_by_type": {
+   "decisions": 1,
+   "disposition": 1,
+   "history": 1,
+   "identity": 1,
+   "overview": 8,
+   "structure": 8
+  },
+  "pages_by_project": {
+   "private": 2,
+   "aegis-finance": 4,
+   "aegis-quant-knowledge": 2
+  },
+  "events_by_op": {
+   "audit": 3,
+   "ingest": 13,
+   "query": 1
+  }
+ },
+ "graph": {
+  "nodes": [
+   {
+    "id": "aegis-finance-decisions",
+    "title": "Aegis Finance — Decisions",
+    "type": "decisions",
+    "project": "aegis-finance",
+    "claims": 13,
+    "public": true,
+    "kind": "page"
+   },
+   {
+    "id": "aegis-finance-history",
+    "title": "Aegis Finance — Commit History",
+    "type": "history",
+    "project": "aegis-finance",
+    "claims": 0,
+    "public": true,
+    "kind": "page"
+   },
+   {
+    "id": "aegis-finance-overview",
+    "title": "Aegis Finance — Overview",
+    "type": "overview",
+    "project": "aegis-finance",
+    "claims": 13,
+    "public": true,
+    "kind": "page"
+   },
+   {
+    "id": "aegis-finance-structure",
+    "title": "Aegis Finance — Structure",
+    "type": "structure",
+    "project": "aegis-finance",
+    "claims": 0,
+    "public": true,
+    "kind": "page"
+   },
+   {
+    "id": "aegis-quant-knowledge-overview",
+    "title": "KNOWLEDGE — Overview",
+    "type": "overview",
+    "project": "aegis-quant-knowledge",
+    "claims": 1,
+    "public": true,
+    "kind": "page"
+   },
+   {
+    "id": "aegis-quant-knowledge-structure",
+    "title": "KNOWLEDGE — Structure",
+    "type": "structure",
+    "project": "aegis-quant-knowledge",
+    "claims": 0,
+    "public": true,
+    "kind": "page"
+   },
+   {
+    "id": "private-1",
+    "title": null,
+    "type": "overview",
+    "project": "private project 1",
+    "claims": 24,
+    "public": false,
+    "kind": "page"
+   },
+   {
+    "id": "private-2",
+    "title": null,
+    "type": "structure",
+    "project": "private project 1",
+    "claims": 0,
+    "public": false,
+    "kind": "page"
+   },
+   {
+    "id": "private-3",
+    "title": null,
+    "type": "disposition",
+    "project": null,
+    "claims": 0,
+    "public": false,
+    "kind": "page"
+   },
+   {
+    "id": "private-4",
+    "title": null,
+    "type": "overview",
+    "project": "private project 2",
+    "claims": 41,
+    "public": false,
+    "kind": "page"
+   },
+   {
+    "id": "private-5",
+    "title": null,
+    "type": "structure",
+    "project": "private project 2",
+    "claims": 0,
+    "public": false,
+    "kind": "page"
+   },
+   {
+    "id": "private-6",
+    "title": null,
+    "type": "overview",
+    "project": "private project 3",
+    "claims": 18,
+    "public": false,
+    "kind": "page"
+   },
+   {
+    "id": "private-7",
+    "title": null,
+    "type": "structure",
+    "project": "private project 3",
+    "claims": 0,
+    "public": false,
+    "kind": "page"
+   },
+   {
+    "id": "private-8",
+    "title": null,
+    "type": "identity",
+    "project": null,
+    "claims": 0,
+    "public": false,
+    "kind": "page"
+   },
+   {
+    "id": "private-9",
+    "title": null,
+    "type": "overview",
+    "project": "private project 4",
+    "claims": 9,
+    "public": false,
+    "kind": "page"
+   },
+   {
+    "id": "private-10",
+    "title": null,
+    "type": "structure",
+    "project": "private project 4",
+    "claims": 0,
+    "public": false,
+    "kind": "page"
+   },
+   {
+    "id": "private-11",
+    "title": null,
+    "type": "overview",
+    "project": "private project 5",
+    "claims": 23,
+    "public": false,
+    "kind": "page"
+   },
+   {
+    "id": "private-12",
+    "title": null,
+    "type": "structure",
+    "project": "private project 5",
+    "claims": 0,
+    "public": false,
+    "kind": "page"
+   },
+   {
+    "id": "private-13",
+    "title": null,
+    "type": "overview",
+    "project": "private project 6",
+    "claims": 6,
+    "public": false,
+    "kind": "page"
+   },
+   {
+    "id": "private-14",
+    "title": null,
+    "type": "structure",
+    "project": "private project 6",
+    "claims": 0,
+    "public": false,
+    "kind": "page"
+   },
+   {
+    "id": "fact-1",
+    "kind": "claim",
+    "parent": "aegis-finance-overview",
+    "public": true,
+    "text": "**Crash Probability** — LightGBM + Logistic Regression blend predicting 20%+ drawdown probability over 3, 6, and 12-month horizons. Validated with purged cross-validation and walk-forward backtesting (3m Brier score: 0.046; see [Known Limitations](#known-limitations) for horizon "
+   },
+   {
+    "id": "fact-2",
+    "kind": "claim",
+    "parent": "aegis-finance-overview",
+    "public": true,
+    "text": "**Monte Carlo Projections** — Jump-diffusion simulation (Merton 1976) with GJR-GARCH volatility, Student-t innovations, and antithetic variates. 10,000 paths default. Validated against Goldman Sachs, JPMorgan, and Vanguard 10-year return assumptions ([docs/REALITY_CHECK.md](docs/"
+   },
+   {
+    "id": "fact-3",
+    "kind": "claim",
+    "parent": "aegis-finance-overview",
+    "public": true,
+    "text": "**Portfolio Builder** — Black-Litterman, Hierarchical Risk Parity (HRP), and template methods with Ledoit-Wolf covariance shrinkage. 5 goal profiles (preservation, income, growth, aggressive growth, retirement). Uses sector ETFs, not individual stock selection."
+   },
+   {
+    "id": "fact-4",
+    "kind": "claim",
+    "parent": "aegis-finance-overview",
+    "public": true,
+    "text": "**Macro Risk Dashboard** — 9-factor composite risk score from FRED data (yield curve, NFCI, initial claims, VIX, credit spreads, etc.) with regime classification (Bull/Bear/Volatile/Neutral)."
+   },
+   {
+    "id": "fact-5",
+    "kind": "claim",
+    "parent": "aegis-finance-overview",
+    "public": true,
+    "text": "**Stock Analysis** — Per-ticker Monte Carlo projections with beta-adjusted crash frequency, analyst target blending, and SHAP explainability showing which factors drive each prediction."
+   },
+   {
+    "id": "fact-6",
+    "kind": "claim",
+    "parent": "aegis-finance-overview",
+    "public": true,
+    "text": "**Stock Screener** — 30+ stocks with Buy/Hold/Sell signals, Sharpe ratios, and sector filtering."
+   },
+   {
+    "id": "fact-7",
+    "kind": "claim",
+    "parent": "aegis-finance-overview",
+    "public": true,
+    "text": "**Sector Analysis** — 11 S&P 500 sectors ranked by risk-adjusted expected return."
+   },
+   {
+    "id": "fact-8",
+    "kind": "claim",
+    "parent": "aegis-finance-overview",
+    "public": true,
+    "text": "**News Intelligence** — GDELT event scoring with FinBERT sentiment analysis and optional DeepSeek AI summaries."
+   },
+   {
+    "id": "fact-9",
+    "kind": "claim",
+    "parent": "aegis-finance-overview",
+    "public": true,
+    "text": "**Retirement Planner** — Compound growth projections with inflation adjustment."
+   },
+   {
+    "id": "fact-10",
+    "kind": "claim",
+    "parent": "aegis-finance-overview",
+    "public": true,
+    "text": "**Net Liquidity Tracker** — Fed balance sheet (WALCL - TGA - RRP) as a market indicator."
+   },
+   {
+    "id": "fact-11",
+    "kind": "claim",
+    "parent": "aegis-finance-overview",
+    "public": true,
+    "text": "**Data Quality Monitoring** — Automated staleness, range, and completeness checks."
+   },
+   {
+    "id": "fact-12",
+    "kind": "claim",
+    "parent": "aegis-finance-overview",
+    "public": true,
+    "text": "**External Validation** — Cross-checks crash predictions against LEI, SLOOS, Fed Funds, and Consumer Sentiment."
+   },
+   {
+    "id": "fact-13",
+    "kind": "claim",
+    "parent": "aegis-finance-decisions",
+    "public": true,
+    "text": "Build the ticker-to-sector map from three prioritized sources"
+   },
+   {
+    "id": "fact-14",
+    "kind": "claim",
+    "parent": "aegis-finance-decisions",
+    "public": true,
+    "text": "Resolve user-added personal tickers' sectors via yfinance + a new ticker_metadata cache in Phase 5.5"
+   },
+   {
+    "id": "fact-15",
+    "kind": "claim",
+    "parent": "aegis-finance-decisions",
+    "public": true,
+    "text": "Defer the catalyst calendar and did-you-know panel to Phase 5 frontend rather than dropping them"
+   },
+   {
+    "id": "fact-16",
+    "kind": "claim",
+    "parent": "aegis-finance-decisions",
+    "public": true,
+    "text": "Compute max drawdown inline from cumulative returns instead of delegating to drawdown_analyzer"
+   },
+   {
+    "id": "fact-17",
+    "kind": "claim",
+    "parent": "aegis-finance-decisions",
+    "public": true,
+    "text": "Use raw SQLite with WAL mode for the portfolio-intelligence persistence (not a heavier DB)"
+   },
+   {
+    "id": "fact-18",
+    "kind": "claim",
+    "parent": "aegis-finance-decisions",
+    "public": true,
+    "text": "Use forward-only schema versioning with no Alembic"
+   },
+   {
+    "id": "fact-19",
+    "kind": "claim",
+    "parent": "aegis-finance-decisions",
+    "public": true,
+    "text": "Pick the final crash model per horizon by held-out Brier score"
+   },
+   {
+    "id": "fact-20",
+    "kind": "claim",
+    "parent": "aegis-finance-decisions",
+    "public": true,
+    "text": "Validate with a walk-forward expanding window with purge gaps and periodic retrain"
+   },
+   {
+    "id": "fact-21",
+    "kind": "claim",
+    "parent": "aegis-finance-decisions",
+    "public": true,
+    "text": "Blend HMM regime probabilities into Monte Carlo drift and volatility at mixing weight 0.15"
+   },
+   {
+    "id": "fact-22",
+    "kind": "claim",
+    "parent": "aegis-finance-decisions",
+    "public": true,
+    "text": "Keep services stateless — no mutable global state except cache"
+   },
+   {
+    "id": "fact-23",
+    "kind": "claim",
+    "parent": "aegis-finance-decisions",
+    "public": true,
+    "text": "Use purged CV with embargo for all ML validation"
+   },
+   {
+    "id": "fact-24",
+    "kind": "claim",
+    "parent": "aegis-finance-decisions",
+    "public": true,
+    "text": "Use walk-forward temporal splits, never random k-fold"
+   },
+   {
+    "id": "fact-25",
+    "kind": "claim",
+    "parent": "aegis-finance-decisions",
+    "public": true,
+    "text": "Enforce monotonicity on multi-horizon crash predictions (3m <= 6m <= 12m)"
+   },
+   {
+    "id": "fact-26",
+    "kind": "claim",
+    "parent": "aegis-finance-overview",
+    "public": true,
+    "text": "Free, open-source market intelligence platform combining ML crash prediction, Monte Carlo simulation, and portfolio construction in a web dashboard."
+   },
+   {
+    "id": "fact-27",
+    "kind": "claim",
+    "parent": "aegis-quant-knowledge-overview",
+    "public": true,
+    "text": "quant-investor-lessons.md: Quant & Investor Lessons — the brain's learning module"
+   },
+   {
+    "id": "fact-28",
+    "kind": "claim",
+    "parent": "private-1",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-29",
+    "kind": "claim",
+    "parent": "private-1",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-30",
+    "kind": "claim",
+    "parent": "private-1",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-31",
+    "kind": "claim",
+    "parent": "private-1",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-32",
+    "kind": "claim",
+    "parent": "private-1",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-33",
+    "kind": "claim",
+    "parent": "private-1",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-34",
+    "kind": "claim",
+    "parent": "private-1",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-35",
+    "kind": "claim",
+    "parent": "private-1",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-36",
+    "kind": "claim",
+    "parent": "private-1",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-37",
+    "kind": "claim",
+    "parent": "private-1",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-38",
+    "kind": "claim",
+    "parent": "private-1",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-39",
+    "kind": "claim",
+    "parent": "private-1",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-40",
+    "kind": "claim",
+    "parent": "private-1",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-41",
+    "kind": "claim",
+    "parent": "private-1",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-42",
+    "kind": "claim",
+    "parent": "private-1",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-43",
+    "kind": "claim",
+    "parent": "private-1",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-44",
+    "kind": "claim",
+    "parent": "private-1",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-45",
+    "kind": "claim",
+    "parent": "private-1",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-46",
+    "kind": "claim",
+    "parent": "private-1",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-47",
+    "kind": "claim",
+    "parent": "private-1",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-48",
+    "kind": "claim",
+    "parent": "private-1",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-49",
+    "kind": "claim",
+    "parent": "private-1",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-50",
+    "kind": "claim",
+    "parent": "private-1",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-51",
+    "kind": "claim",
+    "parent": "private-1",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-52",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-53",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-54",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-55",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-56",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-57",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-58",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-59",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-60",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-61",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-62",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-63",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-64",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-65",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-66",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-67",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-68",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-69",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-70",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-71",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-72",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-73",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-74",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-75",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-76",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-77",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-78",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-79",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-80",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-81",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-82",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-83",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-84",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-85",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-86",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-87",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-88",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-89",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-90",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-91",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-92",
+    "kind": "claim",
+    "parent": "private-4",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-93",
+    "kind": "claim",
+    "parent": "private-6",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-94",
+    "kind": "claim",
+    "parent": "private-6",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-95",
+    "kind": "claim",
+    "parent": "private-6",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-96",
+    "kind": "claim",
+    "parent": "private-6",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-97",
+    "kind": "claim",
+    "parent": "private-6",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-98",
+    "kind": "claim",
+    "parent": "private-6",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-99",
+    "kind": "claim",
+    "parent": "private-6",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-100",
+    "kind": "claim",
+    "parent": "private-6",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-101",
+    "kind": "claim",
+    "parent": "private-6",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-102",
+    "kind": "claim",
+    "parent": "private-6",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-103",
+    "kind": "claim",
+    "parent": "private-6",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-104",
+    "kind": "claim",
+    "parent": "private-6",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-105",
+    "kind": "claim",
+    "parent": "private-6",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-106",
+    "kind": "claim",
+    "parent": "private-6",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-107",
+    "kind": "claim",
+    "parent": "private-6",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-108",
+    "kind": "claim",
+    "parent": "private-6",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-109",
+    "kind": "claim",
+    "parent": "private-6",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-110",
+    "kind": "claim",
+    "parent": "private-6",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-111",
+    "kind": "claim",
+    "parent": "private-9",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-112",
+    "kind": "claim",
+    "parent": "private-9",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-113",
+    "kind": "claim",
+    "parent": "private-9",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-114",
+    "kind": "claim",
+    "parent": "private-9",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-115",
+    "kind": "claim",
+    "parent": "private-9",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-116",
+    "kind": "claim",
+    "parent": "private-9",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-117",
+    "kind": "claim",
+    "parent": "private-9",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-118",
+    "kind": "claim",
+    "parent": "private-9",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-119",
+    "kind": "claim",
+    "parent": "private-9",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-120",
+    "kind": "claim",
+    "parent": "private-11",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-121",
+    "kind": "claim",
+    "parent": "private-11",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-122",
+    "kind": "claim",
+    "parent": "private-11",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-123",
+    "kind": "claim",
+    "parent": "private-11",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-124",
+    "kind": "claim",
+    "parent": "private-11",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-125",
+    "kind": "claim",
+    "parent": "private-11",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-126",
+    "kind": "claim",
+    "parent": "private-11",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-127",
+    "kind": "claim",
+    "parent": "private-11",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-128",
+    "kind": "claim",
+    "parent": "private-11",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-129",
+    "kind": "claim",
+    "parent": "private-11",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-130",
+    "kind": "claim",
+    "parent": "private-11",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-131",
+    "kind": "claim",
+    "parent": "private-11",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-132",
+    "kind": "claim",
+    "parent": "private-11",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-133",
+    "kind": "claim",
+    "parent": "private-11",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-134",
+    "kind": "claim",
+    "parent": "private-11",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-135",
+    "kind": "claim",
+    "parent": "private-11",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-136",
+    "kind": "claim",
+    "parent": "private-11",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-137",
+    "kind": "claim",
+    "parent": "private-11",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-138",
+    "kind": "claim",
+    "parent": "private-11",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-139",
+    "kind": "claim",
+    "parent": "private-11",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-140",
+    "kind": "claim",
+    "parent": "private-11",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-141",
+    "kind": "claim",
+    "parent": "private-11",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-142",
+    "kind": "claim",
+    "parent": "private-11",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-143",
+    "kind": "claim",
+    "parent": "private-13",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-144",
+    "kind": "claim",
+    "parent": "private-13",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-145",
+    "kind": "claim",
+    "parent": "private-13",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-146",
+    "kind": "claim",
+    "parent": "private-13",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-147",
+    "kind": "claim",
+    "parent": "private-13",
+    "public": false,
+    "text": null
+   },
+   {
+    "id": "fact-148",
+    "kind": "claim",
+    "parent": "private-13",
+    "public": false,
+    "text": null
+   }
+  ],
+  "links": [
+   {
+    "source": "aegis-finance-history",
+    "target": "aegis-finance-overview",
+    "rel": "part_of"
+   },
+   {
+    "source": "aegis-finance-structure",
+    "target": "aegis-finance-overview",
+    "rel": "part_of"
+   },
+   {
+    "source": "aegis-quant-knowledge-structure",
+    "target": "aegis-quant-knowledge-overview",
+    "rel": "part_of"
+   },
+   {
+    "source": "private-2",
+    "target": "private-1",
+    "rel": "part_of"
+   },
+   {
+    "source": "private-5",
+    "target": "private-4",
+    "rel": "part_of"
+   },
+   {
+    "source": "private-7",
+    "target": "private-6",
+    "rel": "part_of"
+   },
+   {
+    "source": "private-10",
+    "target": "private-9",
+    "rel": "part_of"
+   },
+   {
+    "source": "private-12",
+    "target": "private-11",
+    "rel": "part_of"
+   },
+   {
+    "source": "private-14",
+    "target": "private-13",
+    "rel": "part_of"
+   },
+   {
+    "source": "aegis-finance-overview",
+    "target": "fact-1",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-overview",
+    "target": "fact-2",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-overview",
+    "target": "fact-3",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-overview",
+    "target": "fact-4",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-overview",
+    "target": "fact-5",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-overview",
+    "target": "fact-6",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-overview",
+    "target": "fact-7",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-overview",
+    "target": "fact-8",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-overview",
+    "target": "fact-9",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-overview",
+    "target": "fact-10",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-overview",
+    "target": "fact-11",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-overview",
+    "target": "fact-12",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-decisions",
+    "target": "fact-13",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-decisions",
+    "target": "fact-14",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-decisions",
+    "target": "fact-15",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-decisions",
+    "target": "fact-16",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-decisions",
+    "target": "fact-17",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-decisions",
+    "target": "fact-18",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-decisions",
+    "target": "fact-19",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-decisions",
+    "target": "fact-20",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-decisions",
+    "target": "fact-21",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-decisions",
+    "target": "fact-22",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-decisions",
+    "target": "fact-23",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-decisions",
+    "target": "fact-24",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-decisions",
+    "target": "fact-25",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-finance-overview",
+    "target": "fact-26",
+    "rel": "claim"
+   },
+   {
+    "source": "aegis-quant-knowledge-overview",
+    "target": "fact-27",
+    "rel": "claim"
+   },
+   {
+    "source": "private-1",
+    "target": "fact-28",
+    "rel": "claim"
+   },
+   {
+    "source": "private-1",
+    "target": "fact-29",
+    "rel": "claim"
+   },
+   {
+    "source": "private-1",
+    "target": "fact-30",
+    "rel": "claim"
+   },
+   {
+    "source": "private-1",
+    "target": "fact-31",
+    "rel": "claim"
+   },
+   {
+    "source": "private-1",
+    "target": "fact-32",
+    "rel": "claim"
+   },
+   {
+    "source": "private-1",
+    "target": "fact-33",
+    "rel": "claim"
+   },
+   {
+    "source": "private-1",
+    "target": "fact-34",
+    "rel": "claim"
+   },
+   {
+    "source": "private-1",
+    "target": "fact-35",
+    "rel": "claim"
+   },
+   {
+    "source": "private-1",
+    "target": "fact-36",
+    "rel": "claim"
+   },
+   {
+    "source": "private-1",
+    "target": "fact-37",
+    "rel": "claim"
+   },
+   {
+    "source": "private-1",
+    "target": "fact-38",
+    "rel": "claim"
+   },
+   {
+    "source": "private-1",
+    "target": "fact-39",
+    "rel": "claim"
+   },
+   {
+    "source": "private-1",
+    "target": "fact-40",
+    "rel": "claim"
+   },
+   {
+    "source": "private-1",
+    "target": "fact-41",
+    "rel": "claim"
+   },
+   {
+    "source": "private-1",
+    "target": "fact-42",
+    "rel": "claim"
+   },
+   {
+    "source": "private-1",
+    "target": "fact-43",
+    "rel": "claim"
+   },
+   {
+    "source": "private-1",
+    "target": "fact-44",
+    "rel": "claim"
+   },
+   {
+    "source": "private-1",
+    "target": "fact-45",
+    "rel": "claim"
+   },
+   {
+    "source": "private-1",
+    "target": "fact-46",
+    "rel": "claim"
+   },
+   {
+    "source": "private-1",
+    "target": "fact-47",
+    "rel": "claim"
+   },
+   {
+    "source": "private-1",
+    "target": "fact-48",
+    "rel": "claim"
+   },
+   {
+    "source": "private-1",
+    "target": "fact-49",
+    "rel": "claim"
+   },
+   {
+    "source": "private-1",
+    "target": "fact-50",
+    "rel": "claim"
+   },
+   {
+    "source": "private-1",
+    "target": "fact-51",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-52",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-53",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-54",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-55",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-56",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-57",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-58",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-59",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-60",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-61",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-62",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-63",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-64",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-65",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-66",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-67",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-68",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-69",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-70",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-71",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-72",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-73",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-74",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-75",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-76",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-77",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-78",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-79",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-80",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-81",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-82",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-83",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-84",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-85",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-86",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-87",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-88",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-89",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-90",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-91",
+    "rel": "claim"
+   },
+   {
+    "source": "private-4",
+    "target": "fact-92",
+    "rel": "claim"
+   },
+   {
+    "source": "private-6",
+    "target": "fact-93",
+    "rel": "claim"
+   },
+   {
+    "source": "private-6",
+    "target": "fact-94",
+    "rel": "claim"
+   },
+   {
+    "source": "private-6",
+    "target": "fact-95",
+    "rel": "claim"
+   },
+   {
+    "source": "private-6",
+    "target": "fact-96",
+    "rel": "claim"
+   },
+   {
+    "source": "private-6",
+    "target": "fact-97",
+    "rel": "claim"
+   },
+   {
+    "source": "private-6",
+    "target": "fact-98",
+    "rel": "claim"
+   },
+   {
+    "source": "private-6",
+    "target": "fact-99",
+    "rel": "claim"
+   },
+   {
+    "source": "private-6",
+    "target": "fact-100",
+    "rel": "claim"
+   },
+   {
+    "source": "private-6",
+    "target": "fact-101",
+    "rel": "claim"
+   },
+   {
+    "source": "private-6",
+    "target": "fact-102",
+    "rel": "claim"
+   },
+   {
+    "source": "private-6",
+    "target": "fact-103",
+    "rel": "claim"
+   },
+   {
+    "source": "private-6",
+    "target": "fact-104",
+    "rel": "claim"
+   },
+   {
+    "source": "private-6",
+    "target": "fact-105",
+    "rel": "claim"
+   },
+   {
+    "source": "private-6",
+    "target": "fact-106",
+    "rel": "claim"
+   },
+   {
+    "source": "private-6",
+    "target": "fact-107",
+    "rel": "claim"
+   },
+   {
+    "source": "private-6",
+    "target": "fact-108",
+    "rel": "claim"
+   },
+   {
+    "source": "private-6",
+    "target": "fact-109",
+    "rel": "claim"
+   },
+   {
+    "source": "private-6",
+    "target": "fact-110",
+    "rel": "claim"
+   },
+   {
+    "source": "private-9",
+    "target": "fact-111",
+    "rel": "claim"
+   },
+   {
+    "source": "private-9",
+    "target": "fact-112",
+    "rel": "claim"
+   },
+   {
+    "source": "private-9",
+    "target": "fact-113",
+    "rel": "claim"
+   },
+   {
+    "source": "private-9",
+    "target": "fact-114",
+    "rel": "claim"
+   },
+   {
+    "source": "private-9",
+    "target": "fact-115",
+    "rel": "claim"
+   },
+   {
+    "source": "private-9",
+    "target": "fact-116",
+    "rel": "claim"
+   },
+   {
+    "source": "private-9",
+    "target": "fact-117",
+    "rel": "claim"
+   },
+   {
+    "source": "private-9",
+    "target": "fact-118",
+    "rel": "claim"
+   },
+   {
+    "source": "private-9",
+    "target": "fact-119",
+    "rel": "claim"
+   },
+   {
+    "source": "private-11",
+    "target": "fact-120",
+    "rel": "claim"
+   },
+   {
+    "source": "private-11",
+    "target": "fact-121",
+    "rel": "claim"
+   },
+   {
+    "source": "private-11",
+    "target": "fact-122",
+    "rel": "claim"
+   },
+   {
+    "source": "private-11",
+    "target": "fact-123",
+    "rel": "claim"
+   },
+   {
+    "source": "private-11",
+    "target": "fact-124",
+    "rel": "claim"
+   },
+   {
+    "source": "private-11",
+    "target": "fact-125",
+    "rel": "claim"
+   },
+   {
+    "source": "private-11",
+    "target": "fact-126",
+    "rel": "claim"
+   },
+   {
+    "source": "private-11",
+    "target": "fact-127",
+    "rel": "claim"
+   },
+   {
+    "source": "private-11",
+    "target": "fact-128",
+    "rel": "claim"
+   },
+   {
+    "source": "private-11",
+    "target": "fact-129",
+    "rel": "claim"
+   },
+   {
+    "source": "private-11",
+    "target": "fact-130",
+    "rel": "claim"
+   },
+   {
+    "source": "private-11",
+    "target": "fact-131",
+    "rel": "claim"
+   },
+   {
+    "source": "private-11",
+    "target": "fact-132",
+    "rel": "claim"
+   },
+   {
+    "source": "private-11",
+    "target": "fact-133",
+    "rel": "claim"
+   },
+   {
+    "source": "private-11",
+    "target": "fact-134",
+    "rel": "claim"
+   },
+   {
+    "source": "private-11",
+    "target": "fact-135",
+    "rel": "claim"
+   },
+   {
+    "source": "private-11",
+    "target": "fact-136",
+    "rel": "claim"
+   },
+   {
+    "source": "private-11",
+    "target": "fact-137",
+    "rel": "claim"
+   },
+   {
+    "source": "private-11",
+    "target": "fact-138",
+    "rel": "claim"
+   },
+   {
+    "source": "private-11",
+    "target": "fact-139",
+    "rel": "claim"
+   },
+   {
+    "source": "private-11",
+    "target": "fact-140",
+    "rel": "claim"
+   },
+   {
+    "source": "private-11",
+    "target": "fact-141",
+    "rel": "claim"
+   },
+   {
+    "source": "private-11",
+    "target": "fact-142",
+    "rel": "claim"
+   },
+   {
+    "source": "private-13",
+    "target": "fact-143",
+    "rel": "claim"
+   },
+   {
+    "source": "private-13",
+    "target": "fact-144",
+    "rel": "claim"
+   },
+   {
+    "source": "private-13",
+    "target": "fact-145",
+    "rel": "claim"
+   },
+   {
+    "source": "private-13",
+    "target": "fact-146",
+    "rel": "claim"
+   },
+   {
+    "source": "private-13",
+    "target": "fact-147",
+    "rel": "claim"
+   },
+   {
+    "source": "private-13",
+    "target": "fact-148",
+    "rel": "claim"
+   }
+  ]
+ },
+ "public_pages": [
+  {
+   "id": "aegis-finance-decisions",
+   "title": "Aegis Finance — Decisions",
+   "type": "decisions",
+   "project": "aegis-finance",
+   "updated": "2026-06-03T08:04:40+00:00",
+   "markdown": "---\nid: aegis-finance-decisions\ntitle: Aegis Finance — Decisions\ntier: 2\ntype: decisions\nproject: aegis-finance\naliases:\n- aegis-finance decisions\ntags:\n- project\n- decisions\n- expensive\nsources:\n- git:aegis-finance@9c2a0e5:docs/phase2_decisions.md\n- git:aegis-finance@9c2a0e5:backend/db.py\n- git:aegis-finance@9c2a0e5:docs/METHODOLOGY.md\n- git:aegis-finance@9c2a0e5:CLAUDE.md\nsource_root: ~\\aegis-finance\nstatus: active\ncreated: '2026-06-03T08:04:40+00:00'\nupdated: '2026-06-03T08:04:40+00:00'\nclaims:\n- id: aegis-finance-dec-000\n  text: Build the ticker-to-sector map from three prioritized sources\n  source: git:aegis-finance@9c2a0e5:docs/phase2_decisions.md#L5-L5\n  status: active\n  kind: decision\n  rationale: cover large/mid-caps already in Aegis (config universe), the PI reference\n    universe, and five small-cap biotech tickers from Murat's personal portfolio too\n    small for either reference universe\n  quote: '`real_analyzer._get_sector_map()` builds a ticker-to-sector mapping from\n    three sources,'\n- id: aegis-finance-dec-001\n  text: Resolve user-added personal tickers' sectors via yfinance + a new ticker_metadata\n    cache in Phase 5.5\n  source: git:aegis-finance@9c2a0e5:docs/phase2_decisions.md#L34-L34\n  status: active\n  kind: decision\n  rationale: otherwise unknown tickers return 'Other', so sector concentration flags\n    misfire; it is a ~20-line addition, not a redesign\n  quote: This is a ~20-line addition to the personal lane ingest path, not a redesign.\n- id: aegis-finance-dec-002\n  text: Defer the catalyst calendar and did-you-know panel to Phase 5 frontend rather\n    than dropping them\n  source: git:aegis-finance@9c2a0e5:docs/phase2_decisions.md#L40-L40\n  status: active\n  kind: decision\n  rationale: catalyst data already exists via existing endpoints and the did-you-know\n    raw data is already computed; only frontend narrative/compare logic remains\n  quote: Both are **deferred to Phase 5 (frontend)**, not dropped.\n- id: aegis-finance-dec-003\n  text: Compute max drawdown inline from cumulative returns instead of delegating\n    to drawdown_analyzer\n  source: git:aegis-finance@9c2a0e5:docs/phase2_decisions.md#L54-L54\n  status: active\n  kind: decision\n  rationale: the analyzer expects an absolute price series and returns a format needing\n    conversion; the inline (cum/peak-1).min() is 4 lines, no conversion, and yields\n    [-1,0] which MetricPack expects\n  quote: Drawdown is computed inline from cumulative returns rather than delegating\n    to\n- id: aegis-finance-dec-004\n  text: Use raw SQLite with WAL mode for the portfolio-intelligence persistence (not\n    a heavier DB)\n  source: git:aegis-finance@9c2a0e5:backend/db.py#L5-L5\n  status: active\n  kind: decision\n  rationale: the rest of Aegis is stateless; persistence is needed only for paper-portfolio\n    state, trade log, audit log, and personal decisions\n  quote: Raw SQLite with WAL mode for the portfolio intelligence subsystem.\n- id: aegis-finance-dec-005\n  text: Use forward-only schema versioning with no Alembic\n  source: git:aegis-finance@9c2a0e5:backend/db.py#L6-L6\n  status: active\n  kind: decision\n  rationale: Alembic is overkill for 6 tables\n  quote: Forward-only schema versioning (no Alembic — overkill for 6 tables).\n- id: aegis-finance-dec-006\n  text: Pick the final crash model per horizon by held-out Brier score\n  source: git:aegis-finance@9c2a0e5:docs/METHODOLOGY.md#L44-L44\n  status: active\n  kind: decision\n  rationale: use whichever calibrates better on held-out data (typically LightGBM\n    3m, Logistic 12m)\n  quote: The final prediction is the model with better held-out Brier score (typically\n    LightGBM for 3-month, Logistic for 12-month).\n- id: aegis-finance-dec-007\n  text: Validate with a walk-forward expanding window with purge gaps and periodic\n    retrain\n  source: git:aegis-finance@9c2a0e5:docs/METHODOLOGY.md#L48-L48\n  status: active\n  kind: decision\n  rationale: prevents data leakage; purge gaps 70/140/265 days for 3/6/12m, retrain\n    every 252 days\n  quote: '**Walk-forward expanding window** (no data leakage):'\n- id: aegis-finance-dec-008\n  text: Blend HMM regime probabilities into Monte Carlo drift and volatility at mixing\n    weight 0.15\n  source: git:aegis-finance@9c2a0e5:docs/METHODOLOGY.md#L115-L115\n  status: active\n  kind: decision\n  rationale: make the simulation regime-aware; weight is configurable\n  quote: HMM regime probabilities blend into the Monte Carlo drift and volatility\n    with a mixing weight of 0.15 (configurable).\n- id: aegis-finance-dec-009\n  text: Keep services stateless — no mutable global state except cache\n  source: git:aegis-finance@9c2a0e5:CLAUDE.md#L201-L201\n  status: active\n  kind: decision\n  rationale: stateless services; this is why only the portfolio-intelligence subsystem\n    needs a database\n  quote: Keep services stateless — no mutable global state except cache\n- id: aegis-finance-dec-010\n  text: Use purged CV with embargo for all ML validation\n  source: git:aegis-finance@9c2a0e5:CLAUDE.md#L202-L202\n  status: active\n  kind: decision\n  rationale: prevent leakage in financial ML (Lopez de Prado)\n  quote: Use purged CV with embargo for all ML validation\n- id: aegis-finance-dec-011\n  text: Use walk-forward temporal splits, never random k-fold\n  source: git:aegis-finance@9c2a0e5:CLAUDE.md#L203-L203\n  status: active\n  kind: decision\n  rationale: financial data is temporal; random k-fold leaks future information\n  quote: Use walk-forward temporal splits (never random k-fold)\n- id: aegis-finance-dec-012\n  text: Enforce monotonicity on multi-horizon crash predictions (3m <= 6m <= 12m)\n  source: git:aegis-finance@9c2a0e5:CLAUDE.md#L205-L205\n  status: active\n  kind: decision\n  rationale: longer horizons must carry at least as much crash probability\n  quote: Enforce monotonicity on multi-horizon predictions (3m ≤ 6m ≤ 12m)\n---\n\n# Aegis Finance — Decisions\n\n> Distilled decision-claims (LLM-extracted, with rationale + source quote).\n\n## Build the ticker-to-sector map from three prioritized sources\n\n- **Why:** cover large/mid-caps already in Aegis (config universe), the PI reference universe, and five small-cap biotech tickers from Murat's personal portfolio too small for either reference universe\n- **Source:** `git:aegis-finance@9c2a0e5:docs/phase2_decisions.md#L5-L5`\n- **Quote:** “`real_analyzer._get_sector_map()` builds a ticker-to-sector mapping from three sources,”\n\n## Resolve user-added personal tickers' sectors via yfinance + a new ticker_metadata cache in Phase 5.5\n\n- **Why:** otherwise unknown tickers return 'Other', so sector concentration flags misfire; it is a ~20-line addition, not a redesign\n- **Source:** `git:aegis-finance@9c2a0e5:docs/phase2_decisions.md#L34-L34`\n- **Quote:** “This is a ~20-line addition to the personal lane ingest path, not a redesign.”\n\n## Defer the catalyst calendar and did-you-know panel to Phase 5 frontend rather than dropping them\n\n- **Why:** catalyst data already exists via existing endpoints and the did-you-know raw data is already computed; only frontend narrative/compare logic remains\n- **Source:** `git:aegis-finance@9c2a0e5:docs/phase2_decisions.md#L40-L40`\n- **Quote:** “Both are **deferred to Phase 5 (frontend)**, not dropped.”\n\n## Compute max drawdown inline from cumulative returns instead of delegating to drawdown_analyzer\n\n- **Why:** the analyzer expects an absolute price series and returns a format needing conversion; the inline (cum/peak-1).min() is 4 lines, no conversion, and yields [-1,0] which MetricPack expects\n- **Source:** `git:aegis-finance@9c2a0e5:docs/phase2_decisions.md#L54-L54`\n- **Quote:** “Drawdown is computed inline from cumulative returns rather than delegating to”\n\n## Use raw SQLite with WAL mode for the portfolio-intelligence persistence (not a heavier DB)\n\n- **Why:** the rest of Aegis is stateless; persistence is needed only for paper-portfolio state, trade log, audit log, and personal decisions\n- **Source:** `git:aegis-finance@9c2a0e5:backend/db.py#L5-L5`\n- **Quote:** “Raw SQLite with WAL mode for the portfolio intelligence subsystem.”\n\n## Use forward-only schema versioning with no Alembic\n\n- **Why:** Alembic is overkill for 6 tables\n- **Source:** `git:aegis-finance@9c2a0e5:backend/db.py#L6-L6`\n- **Quote:** “Forward-only schema versioning (no Alembic — overkill for 6 tables).”\n\n## Pick the final crash model per horizon by held-out Brier score\n\n- **Why:** use whichever calibrates better on held-out data (typically LightGBM 3m, Logistic 12m)\n- **Source:** `git:aegis-finance@9c2a0e5:docs/METHODOLOGY.md#L44-L44`\n- **Quote:** “The final prediction is the model with better held-out Brier score (typically LightGBM for 3-month, Logistic for 12-month).”\n\n## Validate with a walk-forward expanding window with purge gaps and periodic retrain\n\n- **Why:** prevents data leakage; purge gaps 70/140/265 days for 3/6/12m, retrain every 252 days\n- **Source:** `git:aegis-finance@9c2a0e5:docs/METHODOLOGY.md#L48-L48`\n- **Quote:** “**Walk-forward expanding window** (no data leakage):”\n\n## Blend HMM regime probabilities into Monte Carlo drift and volatility at mixing weight 0.15\n\n- **Why:** make the simulation regime-aware; weight is configurable\n- **Source:** `git:aegis-finance@9c2a0e5:docs/METHODOLOGY.md#L115-L115`\n- **Quote:** “HMM regime probabilities blend into the Monte Carlo drift and volatility with a mixing weight of 0.15 (configurable).”\n\n## Keep services stateless — no mutable global state except cache\n\n- **Why:** stateless services; this is why only the portfolio-intelligence subsystem needs a database\n- **Source:** `git:aegis-finance@9c2a0e5:CLAUDE.md#L201-L201`\n- **Quote:** “Keep services stateless — no mutable global state except cache”\n\n## Use purged CV with embargo for all ML validation\n\n- **Why:** prevent leakage in financial ML (Lopez de Prado)\n- **Source:** `git:aegis-finance@9c2a0e5:CLAUDE.md#L202-L202`\n- **Quote:** “Use purged CV with embargo for all ML validation”\n\n## Use walk-forward temporal splits, never random k-fold\n\n- **Why:** financial data is temporal; random k-fold leaks future information\n- **Source:** `git:aegis-finance@9c2a0e5:CLAUDE.md#L203-L203`\n- **Quote:** “Use walk-forward temporal splits (never random k-fold)”\n\n## Enforce monotonicity on multi-horizon crash predictions (3m <= 6m <= 12m)\n\n- **Why:** longer horizons must carry at least as much crash probability\n- **Source:** `git:aegis-finance@9c2a0e5:CLAUDE.md#L205-L205`\n- **Quote:** “Enforce monotonicity on multi-horizon predictions (3m ≤ 6m ≤ 12m)”\n"
+  },
+  {
+   "id": "aegis-finance-history",
+   "title": "Aegis Finance — Commit History",
+   "type": "history",
+   "project": "aegis-finance",
+   "updated": "2026-07-10T16:18:37+00:00",
+   "markdown": "---\nid: aegis-finance-history\ntitle: Aegis Finance — Commit History\ntier: 2\ntype: history\nproject: aegis-finance\naliases:\n- aegis-finance history\n- Aegis Finance history\ntags:\n- project\n- history\nsources:\n- git:aegis-finance@bb47895:<git-log>\nsource_root: ~\\aegis-finance\nstatus: active\ncreated: '2026-07-10T16:18:37+00:00'\nupdated: '2026-07-10T16:18:37+00:00'\nclaims: []\n---\n\n# Aegis Finance — Commit History\n\n- Total commits: **342**\n- Active range: 2026-03-28 → 2026-07-11\n\n## Top contributors\n\n- 340\tMurathan <[email redacted]>\n- 1\tMurathan <[email redacted]>\n- 1\tMurathanx12 <[email redacted]>\n\n## Recent commits (last 15)\n\n- bb47895 2026-07-11 docs(knowledge): quant-investor lessons — the brain's learning module\n- 10d5635 2026-07-11 fix(fragility_candidates): ipo_issuance read hits.total.value — false-zero in prod\n- 6f5f089 2026-07-10 docs: postmortem — deep research + PEAD/quality/guidance builds\n- 196b124 2026-07-10 feat(portfolio): per-position guidance — levels, signals, behavioral nudges\n- 200b553 2026-07-10 feat(pi): TRIAL-QUALITY-IC — gross profitability (GP/A), forward collector\n- 848cc43 2026-07-10 feat(pi): TRIAL-PEAD-IC — earnings-surprise drift score, forward collector\n- c9624c1 2026-07-10 fix(explain_move): coerce numpy/pandas scalars before serialization\n- 4d4ff70 2026-07-10 feat(stock): explain-the-move — evidence dossier + key-optional narration\n- 169fdab 2026-07-09 feat(ui): Risk Watch page — fragility, candidates, alerts in one glance\n- bdb6e4f 2026-07-08 fix(pi): H5 first pass — silent swallowers in the PI services made loud\n- 2c12bbe 2026-07-08 feat(pi): conviction calibration scorecard — grade the judgment (V5)\n- 944cddf 2026-07-08 feat(skills): five Aegis discipline skills — paid-for lessons as procedures\n- 1699d93 2026-07-08 feat(pi): V4 alert engine core — change rules, cooldown, alert log\n- 1148a1a 2026-07-08 feat(pi): wire 13F collector into the daily check + B9 FRED stress candidates\n- 98ca861 2026-07-08 fix(crash_model): strip the Booster-level best_score copy too (CI determinism)\n"
+  },
+  {
+   "id": "aegis-finance-overview",
+   "title": "Aegis Finance — Overview",
+   "type": "overview",
+   "project": "aegis-finance",
+   "updated": "2026-07-10T16:18:37+00:00",
+   "markdown": "---\nid: aegis-finance-overview\ntitle: Aegis Finance — Overview\ntier: 2\ntype: overview\nproject: aegis-finance\naliases:\n- aegis-finance\n- Aegis Finance\n- aegis\ntags:\n- project\n- overview\nsources:\n- git:aegis-finance@bb47895:README.md\n- git:aegis-finance@bb47895:ABSTRACT.md\nsource_root: ~\\aegis-finance\nstatus: active\ncreated: '2026-07-10T16:18:37+00:00'\nupdated: '2026-07-10T16:18:37+00:00'\nclaims:\n- id: aegis-finance-desc\n  text: Free, open-source market intelligence platform combining ML crash prediction,\n    Monte Carlo simulation, and portfolio construction in a web dashboard.\n  source: git:aegis-finance@bb47895:README.md#L3-L3\n  status: active\n- id: aegis-finance-cap-00\n  text: '**Crash Probability** — LightGBM + Logistic Regression blend predicting 20%+\n    drawdown probability over 3, 6, and 12-month horizons. Validated with purged cross-validation\n    and walk-forward backtesting (3m Brier score: 0.046; see [Known Limitations](#known-limitations)\n    for horizon accuracy details).'\n  source: git:aegis-finance@bb47895:README.md#L9-L9\n  status: active\n- id: aegis-finance-cap-01\n  text: '**Monte Carlo Projections** — Jump-diffusion simulation (Merton 1976) with\n    GJR-GARCH volatility, Student-t innovations, and antithetic variates. 10,000 paths\n    default. Validated against Goldman Sachs, JPMorgan, and Vanguard 10-year return\n    assumptions ([docs/REALITY_CHECK.md](docs/REALITY_CHECK.md)).'\n  source: git:aegis-finance@bb47895:README.md#L10-L10\n  status: active\n- id: aegis-finance-cap-02\n  text: '**Portfolio Builder** — Black-Litterman, Hierarchical Risk Parity (HRP),\n    and template methods with Ledoit-Wolf covariance shrinkage. 5 goal profiles (preservation,\n    income, growth, aggressive growth, retirement). Uses sector ETFs, not individual\n    stock selection.'\n  source: git:aegis-finance@bb47895:README.md#L11-L11\n  status: active\n- id: aegis-finance-cap-03\n  text: '**Macro Risk Dashboard** — 9-factor composite risk score from FRED data (yield\n    curve, NFCI, initial claims, VIX, credit spreads, etc.) with regime classification\n    (Bull/Bear/Volatile/Neutral).'\n  source: git:aegis-finance@bb47895:README.md#L12-L12\n  status: active\n- id: aegis-finance-cap-04\n  text: '**Stock Analysis** — Per-ticker Monte Carlo projections with beta-adjusted\n    crash frequency, analyst target blending, and SHAP explainability showing which\n    factors drive each prediction.'\n  source: git:aegis-finance@bb47895:README.md#L13-L13\n  status: active\n- id: aegis-finance-cap-05\n  text: '**Stock Screener** — 30+ stocks with Buy/Hold/Sell signals, Sharpe ratios,\n    and sector filtering.'\n  source: git:aegis-finance@bb47895:README.md#L14-L14\n  status: active\n- id: aegis-finance-cap-06\n  text: '**Sector Analysis** — 11 S&P 500 sectors ranked by risk-adjusted expected\n    return.'\n  source: git:aegis-finance@bb47895:README.md#L15-L15\n  status: active\n- id: aegis-finance-cap-07\n  text: '**News Intelligence** — GDELT event scoring with FinBERT sentiment analysis\n    and optional DeepSeek AI summaries.'\n  source: git:aegis-finance@bb47895:README.md#L16-L16\n  status: active\n- id: aegis-finance-cap-08\n  text: '**Retirement Planner** — Compound growth projections with inflation adjustment.'\n  source: git:aegis-finance@bb47895:README.md#L17-L17\n  status: active\n- id: aegis-finance-cap-09\n  text: '**Net Liquidity Tracker** — Fed balance sheet (WALCL - TGA - RRP) as a market\n    indicator.'\n  source: git:aegis-finance@bb47895:README.md#L18-L18\n  status: active\n- id: aegis-finance-cap-10\n  text: '**Data Quality Monitoring** — Automated staleness, range, and completeness\n    checks.'\n  source: git:aegis-finance@bb47895:README.md#L19-L19\n  status: active\n- id: aegis-finance-cap-11\n  text: '**External Validation** — Cross-checks crash predictions against LEI, SLOOS,\n    Fed Funds, and Consumer Sentiment.'\n  source: git:aegis-finance@bb47895:README.md#L20-L20\n  status: active\n---\n\n# Aegis Finance\n\n> Free, open-source market intelligence platform combining ML crash prediction, Monte Carlo simulation, and portfolio construction in a web dashboard.\n\n## Capabilities\n\n- **Crash Probability** — LightGBM + Logistic Regression blend predicting 20%+ drawdown probability over 3, 6, and 12-month horizons. Validated with purged cross-validation and walk-forward backtesting (3m Brier score: 0.046; see [Known Limitations](#known-limitations) for horizon accuracy details).\n- **Monte Carlo Projections** — Jump-diffusion simulation (Merton 1976) with GJR-GARCH volatility, Student-t innovations, and antithetic variates. 10,000 paths default. Validated against Goldman Sachs, JPMorgan, and Vanguard 10-year return assumptions ([docs/REALITY_CHECK.md](docs/REALITY_CHECK.md)).\n- **Portfolio Builder** — Black-Litterman, Hierarchical Risk Parity (HRP), and template methods with Ledoit-Wolf covariance shrinkage. 5 goal profiles (preservation, income, growth, aggressive growth, retirement). Uses sector ETFs, not individual stock selection.\n- **Macro Risk Dashboard** — 9-factor composite risk score from FRED data (yield curve, NFCI, initial claims, VIX, credit spreads, etc.) with regime classification (Bull/Bear/Volatile/Neutral).\n- **Stock Analysis** — Per-ticker Monte Carlo projections with beta-adjusted crash frequency, analyst target blending, and SHAP explainability showing which factors drive each prediction.\n- **Stock Screener** — 30+ stocks with Buy/Hold/Sell signals, Sharpe ratios, and sector filtering.\n- **Sector Analysis** — 11 S&P 500 sectors ranked by risk-adjusted expected return.\n- **News Intelligence** — GDELT event scoring with FinBERT sentiment analysis and optional DeepSeek AI summaries.\n- **Retirement Planner** — Compound growth projections with inflation adjustment.\n- **Net Liquidity Tracker** — Fed balance sheet (WALCL - TGA - RRP) as a market indicator.\n- **Data Quality Monitoring** — Automated staleness, range, and completeness checks.\n- **External Validation** — Cross-checks crash predictions against LEI, SLOOS, Fed Funds, and Consumer Sentiment.\n\n## README sections\n\n- What It Does\n- What It Is Not\n- Comparison to Similar Projects\n- Known Limitations\n- Quick Start\n- Prerequisites\n- Setup\n- Train the Crash Model (optional, ~5-10 min)\n- Docker\n- Commands Reference\n- Development\n- Testing\n- ML Engine (Offline)\n- Docker\n- API Endpoints\n- API Testing (curl)\n- Data Sources\n- API Keys\n- Tech Stack\n- Architecture\n- Deployment\n- Project Structure\n- Methodology Status\n- Built With / References\n- Research & Validation\n- Free Hosting\n- Contributing\n- Disclaimer\n- License\n"
+  },
+  {
+   "id": "aegis-finance-structure",
+   "title": "Aegis Finance — Structure",
+   "type": "structure",
+   "project": "aegis-finance",
+   "updated": "2026-07-10T16:18:37+00:00",
+   "markdown": "---\nid: aegis-finance-structure\ntitle: Aegis Finance — Structure\ntier: 2\ntype: structure\nproject: aegis-finance\naliases:\n- aegis-finance structure\n- Aegis Finance structure\ntags:\n- project\n- structure\nsources:\n- git:aegis-finance@bb47895:.\nsource_root: ~\\aegis-finance\nstatus: active\ncreated: '2026-07-10T16:18:37+00:00'\nupdated: '2026-07-10T16:18:37+00:00'\nclaims: []\n---\n\n# Aegis Finance — Structure\n\nTracked files: **917** (source: `git ls-files`, secrets/ignored excluded).\n\n## Module map\n\n- **(root)** — .dockerignore, .env.example, .gitignore, ABSTRACT.md, CLAUDE.md, CONTRIBUTING.md, LICENSE, NEGATIVE_RESULTS.md, README.md, REFERENCES.md, docker-compose.yml, pytest.ini … (+2 more)\n- **.claude** — commands/, skills/\n- **.github** — workflows/\n- **backend** — BACKTEST_RESULTS.md, Dockerfile, __init__.py, cache.py, config.py, data/, db.py, main.py, middleware.py, models/, observability.py, requirements.txt … (+4 more)\n- **docs** — BACKLOG.md, CANON.md, CAPABILITY_MATRIX.md, DATA_INTEGRITY.md, DATA_OPTIONS.md, DEEP_RESEARCH_2026-06-14_DECISION.md, EVOLUTION_LOOP_PLAN.md, FACTOR_MENU.md, FACTOR_VALIDATION.md, FINDINGS.md, FRAGILITY_RESEARCH_2026-06-14.md, IMPROVEMENT_BACKLOG.md … (+23 more)\n- **engine** — __init__.py, autoresearch/, requirements.txt, research/, training/, validation/\n- **frontend** — .dockerignore, .gitignore, AGENTS.md, CLAUDE.md, Dockerfile, README.md, components.json, eslint.config.mjs, next.config.ts, package-lock.json, package.json, postcss.config.mjs … (+4 more)\n- **lab** — README.md, baseline_failures.txt, build_prompt.py, compare_results.py, data_generator.py, experiments/, health_probe.py, hypotheses.py, quality.py, rd_loop.py, robustness.py, run_lab.sh … (+3 more)\n- **scripts** — log_conviction.py, seed_p1_6_lanes.py\n- **sdk** — README.md, aegis/, pyproject.toml, tests/\n\n## File composition\n\n- `.py` × 379\n- `.txt` × 247\n- `.md` × 171\n- `.tsx` × 67\n- `.ts` × 14\n- `.json` × 10\n- `.(none)` × 7\n- `.svg` × 5\n- `.yaml` × 4\n- `.yml` × 2\n- `.mjs` × 2\n- `.toml` × 2\n- `.example` × 1\n- `.csv` × 1\n- `.png` × 1\n"
+  },
+  {
+   "id": "aegis-quant-knowledge-overview",
+   "title": "KNOWLEDGE — Overview",
+   "type": "overview",
+   "project": "aegis-quant-knowledge",
+   "updated": "2026-07-10T16:19:00+00:00",
+   "markdown": "---\nid: aegis-quant-knowledge-overview\ntitle: KNOWLEDGE — Overview\ntier: 2\ntype: overview\nproject: aegis-quant-knowledge\naliases:\n- aegis-quant-knowledge\n- KNOWLEDGE\n- aegis\ntags:\n- project\n- overview\n- folder\nsources:\n- folder:aegis-quant-knowledge:.\nsource_root: ~\\aegis-finance\\docs\\KNOWLEDGE\nstatus: active\ncreated: '2026-07-10T16:19:00+00:00'\nupdated: '2026-07-10T16:19:00+00:00'\nclaims:\n- id: aegis-quant-knowledge-doc-00\n  text: 'quant-investor-lessons.md: Quant & Investor Lessons — the brain''s learning\n    module'\n  source: folder:aegis-quant-knowledge:quant-investor-lessons.md#L1\n  status: active\n---\n\n# KNOWLEDGE\n\n> Local folder ingested by Optimus (folder channel).\n\n## Activity\n\n- Tracked files: **1**\n- Most recent edit: 2026-07-11\n"
+  },
+  {
+   "id": "aegis-quant-knowledge-structure",
+   "title": "KNOWLEDGE — Structure",
+   "type": "structure",
+   "project": "aegis-quant-knowledge",
+   "updated": "2026-07-10T16:19:00+00:00",
+   "markdown": "---\nid: aegis-quant-knowledge-structure\ntitle: KNOWLEDGE — Structure\ntier: 2\ntype: structure\nproject: aegis-quant-knowledge\naliases:\n- aegis-quant-knowledge structure\ntags:\n- project\n- structure\n- folder\nsources:\n- folder:aegis-quant-knowledge:.\nsource_root: ~\\aegis-finance\\docs\\KNOWLEDGE\nstatus: active\ncreated: '2026-07-10T16:19:00+00:00'\nupdated: '2026-07-10T16:19:00+00:00'\nclaims: []\n---\n\n# KNOWLEDGE — Structure\n\nFiles: **1** (folder channel; binaries counted, not read; junk dirs + dotfiles skipped).\n\n## Top-level\n\n- **(root)** — quant-investor-lessons.md\n\n## File composition\n\n- `.md` × 1\n"
+  }
+ ],
+ "retrieval_demos": [
+  {
+   "query": "what is aegis finance",
+   "results": [
+    {
+     "page_id": "aegis-finance-overview",
+     "title": "Aegis Finance — Overview",
+     "type": "overview",
+     "project": "aegis-finance",
+     "score": 95.0,
+     "public": true
+    },
+    {
+     "page_id": "aegis-quant-knowledge-overview",
+     "title": "KNOWLEDGE — Overview",
+     "type": "overview",
+     "project": "aegis-quant-knowledge",
+     "score": 85.0,
+     "public": true
+    },
+    {
+     "page_id": "aegis-finance-decisions",
+     "title": "Aegis Finance — Decisions",
+     "type": "decisions",
+     "project": "aegis-finance",
+     "score": 32.0,
+     "public": true
+    }
+   ]
+  },
+  {
+   "query": "aegis structure",
+   "results": [
+    {
+     "page_id": "aegis-finance-structure",
+     "title": "Aegis Finance — Structure",
+     "type": "structure",
+     "project": "aegis-finance",
+     "score": 75.0,
+     "public": true
+    },
+    {
+     "page_id": "aegis-quant-knowledge-structure",
+     "title": "KNOWLEDGE — Structure",
+     "type": "structure",
+     "project": "aegis-quant-knowledge",
+     "score": 70.0,
+     "public": true
+    },
+    {
+     "page_id": "aegis-finance-overview",
+     "title": "Aegis Finance — Overview",
+     "type": "overview",
+     "project": "aegis-finance",
+     "score": 40.0,
+     "public": true
+    }
+   ]
+  },
+  {
+   "query": "aegis quant knowledge lessons",
+   "results": [
+    {
+     "page_id": "aegis-quant-knowledge-overview",
+     "title": "KNOWLEDGE — Overview",
+     "type": "overview",
+     "project": "aegis-quant-knowledge",
+     "score": 74.0,
+     "public": true
+    },
+    {
+     "page_id": "aegis-finance-overview",
+     "title": "Aegis Finance — Overview",
+     "type": "overview",
+     "project": "aegis-finance",
+     "score": 70.0,
+     "public": true
+    },
+    {
+     "page_id": "aegis-finance-decisions",
+     "title": "Aegis Finance — Decisions",
+     "type": "decisions",
+     "project": "aegis-finance",
+     "score": 25.0,
+     "public": true
+    }
+   ]
+  }
+ ],
+ "how_to_use": {
+  "for_ai_agents": "Fetch this file. `public_pages[*].markdown` is the full knowledge text. `graph` is the page map (private nodes anonymized). Answer questions from it in English; cite page ids.",
+  "raw_pages": "GET /pages/<id>.md"
+ }
+}

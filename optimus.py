@@ -16,23 +16,28 @@ from pathlib import Path
 
 from core.audit import audit as run_audit
 from core.deprecate import deprecate as run_deprecate
-from core.ingest import ingest_folder, ingest_git
+from core.ingest import ingest_folder, ingest_git, ingest_notes
 from core.query import format_answer, retrieve
 from core.store import Store
 
 
 def cmd_ingest(args: argparse.Namespace) -> int:
-    if not (args.git or args.folder):
-        print("pass --git <repo> or --folder <path>.", file=sys.stderr)
+    if not (args.git or args.folder or args.notes):
+        print("pass --git <repo>, --folder <path>, or --notes <path>.", file=sys.stderr)
         return 2
     with Store(args.root) as store:
         if args.git:
             result = ingest_git(store, args.git, project=args.project)
+        elif args.notes:
+            result = ingest_notes(store, args.notes, project=args.project)
         else:
             result = ingest_folder(store, args.folder, project=args.project)
     print(result.summary())
-    for pid in result.pages:
+    shown = result.pages if len(result.pages) <= 8 else result.pages[:8]
+    for pid in shown:
         print(f"  page: brain/projects/{result.project}/{pid}.md")
+    if len(result.pages) > len(shown):
+        print(f"  … +{len(result.pages) - len(shown)} more pages")
     return 0
 
 
@@ -109,6 +114,9 @@ def main(argv: list[str] | None = None) -> int:
     p_ingest = sub.add_parser("ingest", help="ingest a source into the brain")
     p_ingest.add_argument("--git", metavar="SRC", help="git repo: local path or remote URL")
     p_ingest.add_argument("--folder", metavar="PATH", help="local folder (structure + text files)")
+    p_ingest.add_argument("--notes", metavar="PATH",
+                          help="markdown notes: folder of .md files or a single .md — "
+                               "one fully-indexed page per file")
     p_ingest.add_argument("--project", metavar="SLUG", help="override project slug")
     p_ingest.set_defaults(func=cmd_ingest)
 

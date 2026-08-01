@@ -1,0 +1,1098 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Optimus Brain — Interactive Map</title>
+<meta name="description" content="An interactive map of Optimus: the memory layer behind Aegis Finance. English-only, machine-readable.">
+<style>
+:root {
+  --bg: #FAFAF7; --surface: #FFFFFF; --ink: #1A1A1A; --ink-2: #52525B;
+  --ink-3: #8E8E93; --line: #E4E4E0; --accent: #2C6E8F;
+  --good-bg: #E7F2E9; --good-ink: #276236; --lock-bg: #F1F0EC;
+  --c-overview: #2a78d6; --c-structure: #1baf7a; --c-history: #eda100;
+  --c-decisions: #4a3aa7; --c-personal: #e34948; --c-private: #9a9a96;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #121214; --surface: #1C1C1F; --ink: #ECECEA; --ink-2: #A9A9B2;
+    --ink-3: #77777F; --line: #2C2C30; --accent: #6FB1D0;
+    --good-bg: #1E2F23; --good-ink: #8CC79A; --lock-bg: #232326;
+    --c-overview: #3987e5; --c-structure: #199e70; --c-history: #c98500;
+    --c-decisions: #9085e9; --c-personal: #e66767; --c-private: #6e6e74; }
+}
+* { box-sizing: border-box; margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.6 ui-sans-serif,
+  system-ui, "Segoe UI", sans-serif; padding: 0 16px 80px; }
+main { max-width: 960px; margin: 0 auto; }
+header { padding: 40px 0 8px; }
+h1 { font-size: 28px; letter-spacing: -0.02em; }
+h2 { font-size: 20px; margin: 40px 0 12px; letter-spacing: -0.01em; }
+p.lede { color: var(--ink-2); max-width: 68ch; }
+.map-wrap { display: grid; grid-template-columns: 1fr 300px; gap: 12px;
+  margin-top: 16px; }
+@media (max-width: 760px) { .map-wrap { grid-template-columns: 1fr; } }
+#map-card { background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; overflow: hidden; position: relative; }
+#brainmap { display: block; width: 100%; height: 480px; cursor: grab; }
+#map-hint { position: absolute; left: 12px; bottom: 10px; font-size: 12.5px;
+  color: var(--ink-3); pointer-events: none; }
+.legend { display: flex; flex-wrap: wrap; gap: 10px 16px; padding: 10px 14px;
+  border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+#panel { background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; padding: 16px; font-size: 14.5px; align-self: start;
+  position: sticky; top: 12px; }
+#panel h3 { font-size: 16px; margin-bottom: 6px; }
+#panel .meta { color: var(--ink-3); font-size: 12.5px; }
+#panel p { margin-top: 8px; color: var(--ink-2); }
+#panel a { color: var(--accent); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr));
+  gap: 12px; margin-top: 16px; }
+.tile { background: var(--surface); border: 1px solid var(--line);
+  border-radius: 10px; padding: 14px 16px; }
+.tile-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--ink-3); }
+.tile-value { font-size: 30px; font-weight: 650; font-variant-numeric: tabular-nums;
+  margin: 2px 0; }
+.tile-sub { font-size: 12.5px; color: var(--ink-2); }
+.card { background: var(--surface); border: 1px solid var(--line);
+  border-radius: 10px; padding: 18px 20px; margin-top: 12px; }
+.flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  font-size: 14.5px; color: var(--ink-2); margin-top: 8px; }
+.flow b { color: var(--ink); font-weight: 600; }
+.flow .arrow { color: var(--ink-3); }
+.pill { display: inline-block; background: var(--lock-bg); border-radius: 999px;
+  padding: 2px 10px; font-size: 13px; color: var(--ink-2); margin: 2px 4px 2px 0; }
+ul { padding-left: 22px; }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+th { color: var(--ink-3); font-size: 12px; text-transform: uppercase;
+  letter-spacing: 0.05em; font-weight: 600; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.demo { margin-top: 14px; }
+.demo-q { font-weight: 600; margin-bottom: 6px; }
+details.page { background: var(--surface); border: 1px solid var(--line);
+  border-radius: 10px; padding: 12px 16px; margin-top: 10px; }
+details.page summary { cursor: pointer; }
+.meta { color: var(--ink-3); font-size: 13px; }
+.page-body { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 10px;
+  font-size: 15px; overflow-x: auto; }
+.page-body h2, .page-body h3, .page-body h4 { margin: 14px 0 6px; }
+pre { background: var(--lock-bg); border-radius: 8px; padding: 10px 12px;
+  overflow-x: auto; font-size: 13px; }
+code { font: 13.5px/1.5 ui-monospace, "Cascadia Code", monospace;
+  background: var(--lock-bg); border-radius: 4px; padding: 1px 4px; }
+pre code { background: none; padding: 0; }
+a { color: var(--accent); }
+footer { margin-top: 48px; color: var(--ink-3); font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>🧠 Optimus Brain — interactive map</h1>
+  <p class="lede">Optimus is the persistent memory layer behind
+  <strong>Aegis Finance</strong>. Everything it knows lives in markdown
+  "pages" connected by links — this map shows the whole brain. <strong>Big
+  bubbles are pages</strong> (color = page type); <strong>every small dot
+  orbiting a page is one verified fact</strong> it holds, and the moving
+  pulses trace how retrieval walks the links. Gray means private — you can
+  see those neurons exist, never what's inside. Click anything: pages explain
+  themselves, public facts show their text. All content is English.</p>
+</header>
+
+<h2>The brain, mapped</h2>
+<div class="map-wrap">
+  <div id="map-card">
+    <canvas id="brainmap"></canvas>
+    <div id="map-hint">drag bubbles · click for details</div>
+    <div class="legend">
+      <span><i class="dot" style="background:var(--c-overview)"></i>overview</span>
+      <span><i class="dot" style="background:var(--c-structure)"></i>structure</span>
+      <span><i class="dot" style="background:var(--c-history)"></i>history</span>
+      <span><i class="dot" style="background:var(--c-decisions)"></i>decisions</span>
+      <span><i class="dot" style="background:var(--c-personal)"></i>identity/disposition</span>
+      <span><i class="dot" style="background:var(--c-private)"></i>private (anonymized)</span>
+    </div>
+  </div>
+  <aside id="panel">
+    <h3>Click a bubble</h3>
+    <p>Every bubble is one knowledge page. Bigger bubble = more verified facts
+    inside. The two clusters on the map are the public Aegis projects; the
+    gray bubbles are the private rest of the brain.</p>
+  </aside>
+</div>
+
+<h2>How it digests information</h2>
+<div class="card">
+  <div class="flow"><b>1 · ingest</b><span class="arrow">→</span>
+    <span>git repos &amp; folders are read and turned into typed pages
+    (overview / structure / history / decisions), each fact cited back to its
+    source</span></div>
+  <div class="flow"><b>2 · index</b><span class="arrow">→</span>
+    <span>pages, facts, name-aliases and links land in one SQLite index;
+    every operation is logged</span></div>
+  <div class="flow"><b>3 · retrieve</b><span class="arrow">→</span>
+    <span>questions are answered by deterministic scoring (no AI guessing at
+    this step — same question, same answer, always cited)</span></div>
+  <div class="flow"><b>4 · serve</b><span class="arrow">→</span>
+    <span>AI sessions (Claude, DeepSeek, any agent) consult it through MCP
+    tools like <code>brain_query</code> instead of re-reading whole
+    repositories</span></div>
+  <p style="margin-top:10px; color: var(--ink-2); font-size: 14px;">
+  Operations recorded so far: <span class="pill">audit × 3</span><span class="pill">ingest × 13</span><span class="pill">query × 1</span></p>
+</div>
+
+<h2>Corpus at a glance</h2>
+<div class="tiles"><div class="tile"><div class="tile-label">Pages</div><div class="tile-value">20</div><div class="tile-sub">knowledge pages (bubbles on the map)</div></div><div class="tile"><div class="tile-label">Claims</div><div class="tile-value">148</div><div class="tile-sub">atomic facts with provenance</div></div><div class="tile"><div class="tile-label">Aliases</div><div class="tile-value">60</div><div class="tile-sub">names that route a query</div></div><div class="tile"><div class="tile-label">Edges</div><div class="tile-value">9</div><div class="tile-sub">links between pages</div></div></div>
+
+<h2>Retrieval, demonstrated (real output)</h2>
+<div class="card">
+  <p style="font-size:14px; color: var(--ink-2);">Each query below was run
+  through the actual retrieval engine at build time. Higher score = better
+  match. 🔒 marks a private page — it can be <em>found</em>, but its content
+  is never exported here.</p>
+  <div class="demo"><div class="demo-q">“what is aegis finance”</div><table><thead><tr><th>page</th><th>type</th><th class="num">score</th></tr></thead><tbody><tr><td><code>aegis-finance-overview</code></td><td>overview</td><td class="num">95</td></tr><tr><td><code>aegis-quant-knowledge-overview</code></td><td>overview</td><td class="num">85</td></tr><tr><td><code>aegis-finance-decisions</code></td><td>decisions</td><td class="num">32</td></tr></tbody></table></div><div class="demo"><div class="demo-q">“aegis structure”</div><table><thead><tr><th>page</th><th>type</th><th class="num">score</th></tr></thead><tbody><tr><td><code>aegis-finance-structure</code></td><td>structure</td><td class="num">75</td></tr><tr><td><code>aegis-quant-knowledge-structure</code></td><td>structure</td><td class="num">70</td></tr><tr><td><code>aegis-finance-overview</code></td><td>overview</td><td class="num">40</td></tr></tbody></table></div><div class="demo"><div class="demo-q">“aegis quant knowledge lessons”</div><table><thead><tr><th>page</th><th>type</th><th class="num">score</th></tr></thead><tbody><tr><td><code>aegis-quant-knowledge-overview</code></td><td>overview</td><td class="num">74</td></tr><tr><td><code>aegis-finance-overview</code></td><td>overview</td><td class="num">70</td></tr><tr><td><code>aegis-finance-decisions</code></td><td>decisions</td><td class="num">25</td></tr></tbody></table></div>
+</div>
+
+<h2>Public knowledge pages (full text)</h2>
+<details class="page" id="page-aegis-finance-decisions"><summary><strong>Aegis Finance — Decisions</strong> <span class="meta">aegis-finance · decisions · updated 2026-06-03T08:04:40+00:00 · <a href="pages/aegis-finance-decisions.md">raw</a></span></summary><div class="page-body"><p>---</p>
+<p>id: aegis-finance-decisions</p>
+<p>title: Aegis Finance — Decisions</p>
+<p>tier: 2</p>
+<p>type: decisions</p>
+<p>project: aegis-finance</p>
+<p>aliases:</p>
+<ul>
+<li>aegis-finance decisions</li>
+</ul>
+<p>tags:</p>
+<ul>
+<li>project</li>
+<li>decisions</li>
+<li>expensive</li>
+</ul>
+<p>sources:</p>
+<ul>
+<li>git:aegis-finance@9c2a0e5:docs/phase2_decisions.md</li>
+<li>git:aegis-finance@9c2a0e5:backend/db.py</li>
+<li>git:aegis-finance@9c2a0e5:docs/METHODOLOGY.md</li>
+<li>git:aegis-finance@9c2a0e5:CLAUDE.md</li>
+</ul>
+<p>source_root: ~\aegis-finance</p>
+<p>status: active</p>
+<p>created: &#x27;2026-06-03T08:04:40+00:00&#x27;</p>
+<p>updated: &#x27;2026-06-03T08:04:40+00:00&#x27;</p>
+<p>claims:</p>
+<ul>
+<li>id: aegis-finance-dec-000</li>
+</ul>
+<p>  text: Build the ticker-to-sector map from three prioritized sources</p>
+<p>  source: git:aegis-finance@9c2a0e5:docs/phase2_decisions.md#L5-L5</p>
+<p>  status: active</p>
+<p>  kind: decision</p>
+<p>  rationale: cover large/mid-caps already in Aegis (config universe), the PI reference</p>
+<p>    universe, and five small-cap biotech tickers from Murat&#x27;s personal portfolio too</p>
+<p>    small for either reference universe</p>
+<p>  quote: &#x27;<code>real_analyzer._get_sector_map()</code> builds a ticker-to-sector mapping from</p>
+<p>    three sources,&#x27;</p>
+<ul>
+<li>id: aegis-finance-dec-001</li>
+</ul>
+<p>  text: Resolve user-added personal tickers&#x27; sectors via yfinance + a new ticker_metadata</p>
+<p>    cache in Phase 5.5</p>
+<p>  source: git:aegis-finance@9c2a0e5:docs/phase2_decisions.md#L34-L34</p>
+<p>  status: active</p>
+<p>  kind: decision</p>
+<p>  rationale: otherwise unknown tickers return &#x27;Other&#x27;, so sector concentration flags</p>
+<p>    misfire; it is a ~20-line addition, not a redesign</p>
+<p>  quote: This is a ~20-line addition to the personal lane ingest path, not a redesign.</p>
+<ul>
+<li>id: aegis-finance-dec-002</li>
+</ul>
+<p>  text: Defer the catalyst calendar and did-you-know panel to Phase 5 frontend rather</p>
+<p>    than dropping them</p>
+<p>  source: git:aegis-finance@9c2a0e5:docs/phase2_decisions.md#L40-L40</p>
+<p>  status: active</p>
+<p>  kind: decision</p>
+<p>  rationale: catalyst data already exists via existing endpoints and the did-you-know</p>
+<p>    raw data is already computed; only frontend narrative/compare logic remains</p>
+<p>  quote: Both are <strong>deferred to Phase 5 (frontend)</strong>, not dropped.</p>
+<ul>
+<li>id: aegis-finance-dec-003</li>
+</ul>
+<p>  text: Compute max drawdown inline from cumulative returns instead of delegating</p>
+<p>    to drawdown_analyzer</p>
+<p>  source: git:aegis-finance@9c2a0e5:docs/phase2_decisions.md#L54-L54</p>
+<p>  status: active</p>
+<p>  kind: decision</p>
+<p>  rationale: the analyzer expects an absolute price series and returns a format needing</p>
+<p>    conversion; the inline (cum/peak-1).min() is 4 lines, no conversion, and yields</p>
+<p>    [-1,0] which MetricPack expects</p>
+<p>  quote: Drawdown is computed inline from cumulative returns rather than delegating</p>
+<p>    to</p>
+<ul>
+<li>id: aegis-finance-dec-004</li>
+</ul>
+<p>  text: Use raw SQLite with WAL mode for the portfolio-intelligence persistence (not</p>
+<p>    a heavier DB)</p>
+<p>  source: git:aegis-finance@9c2a0e5:backend/db.py#L5-L5</p>
+<p>  status: active</p>
+<p>  kind: decision</p>
+<p>  rationale: the rest of Aegis is stateless; persistence is needed only for paper-portfolio</p>
+<p>    state, trade log, audit log, and personal decisions</p>
+<p>  quote: Raw SQLite with WAL mode for the portfolio intelligence subsystem.</p>
+<ul>
+<li>id: aegis-finance-dec-005</li>
+</ul>
+<p>  text: Use forward-only schema versioning with no Alembic</p>
+<p>  source: git:aegis-finance@9c2a0e5:backend/db.py#L6-L6</p>
+<p>  status: active</p>
+<p>  kind: decision</p>
+<p>  rationale: Alembic is overkill for 6 tables</p>
+<p>  quote: Forward-only schema versioning (no Alembic — overkill for 6 tables).</p>
+<ul>
+<li>id: aegis-finance-dec-006</li>
+</ul>
+<p>  text: Pick the final crash model per horizon by held-out Brier score</p>
+<p>  source: git:aegis-finance@9c2a0e5:docs/METHODOLOGY.md#L44-L44</p>
+<p>  status: active</p>
+<p>  kind: decision</p>
+<p>  rationale: use whichever calibrates better on held-out data (typically LightGBM</p>
+<p>    3m, Logistic 12m)</p>
+<p>  quote: The final prediction is the model with better held-out Brier score (typically</p>
+<p>    LightGBM for 3-month, Logistic for 12-month).</p>
+<ul>
+<li>id: aegis-finance-dec-007</li>
+</ul>
+<p>  text: Validate with a walk-forward expanding window with purge gaps and periodic</p>
+<p>    retrain</p>
+<p>  source: git:aegis-finance@9c2a0e5:docs/METHODOLOGY.md#L48-L48</p>
+<p>  status: active</p>
+<p>  kind: decision</p>
+<p>  rationale: prevents data leakage; purge gaps 70/140/265 days for 3/6/12m, retrain</p>
+<p>    every 252 days</p>
+<p>  quote: &#x27;<strong>Walk-forward expanding window</strong> (no data leakage):&#x27;</p>
+<ul>
+<li>id: aegis-finance-dec-008</li>
+</ul>
+<p>  text: Blend HMM regime probabilities into Monte Carlo drift and volatility at mixing</p>
+<p>    weight 0.15</p>
+<p>  source: git:aegis-finance@9c2a0e5:docs/METHODOLOGY.md#L115-L115</p>
+<p>  status: active</p>
+<p>  kind: decision</p>
+<p>  rationale: make the simulation regime-aware; weight is configurable</p>
+<p>  quote: HMM regime probabilities blend into the Monte Carlo drift and volatility</p>
+<p>    with a mixing weight of 0.15 (configurable).</p>
+<ul>
+<li>id: aegis-finance-dec-009</li>
+</ul>
+<p>  text: Keep services stateless — no mutable global state except cache</p>
+<p>  source: git:aegis-finance@9c2a0e5:CLAUDE.md#L201-L201</p>
+<p>  status: active</p>
+<p>  kind: decision</p>
+<p>  rationale: stateless services; this is why only the portfolio-intelligence subsystem</p>
+<p>    needs a database</p>
+<p>  quote: Keep services stateless — no mutable global state except cache</p>
+<ul>
+<li>id: aegis-finance-dec-010</li>
+</ul>
+<p>  text: Use purged CV with embargo for all ML validation</p>
+<p>  source: git:aegis-finance@9c2a0e5:CLAUDE.md#L202-L202</p>
+<p>  status: active</p>
+<p>  kind: decision</p>
+<p>  rationale: prevent leakage in financial ML (Lopez de Prado)</p>
+<p>  quote: Use purged CV with embargo for all ML validation</p>
+<ul>
+<li>id: aegis-finance-dec-011</li>
+</ul>
+<p>  text: Use walk-forward temporal splits, never random k-fold</p>
+<p>  source: git:aegis-finance@9c2a0e5:CLAUDE.md#L203-L203</p>
+<p>  status: active</p>
+<p>  kind: decision</p>
+<p>  rationale: financial data is temporal; random k-fold leaks future information</p>
+<p>  quote: Use walk-forward temporal splits (never random k-fold)</p>
+<ul>
+<li>id: aegis-finance-dec-012</li>
+</ul>
+<p>  text: Enforce monotonicity on multi-horizon crash predictions (3m &lt;= 6m &lt;= 12m)</p>
+<p>  source: git:aegis-finance@9c2a0e5:CLAUDE.md#L205-L205</p>
+<p>  status: active</p>
+<p>  kind: decision</p>
+<p>  rationale: longer horizons must carry at least as much crash probability</p>
+<p>  quote: Enforce monotonicity on multi-horizon predictions (3m ≤ 6m ≤ 12m)</p>
+<p>---</p>
+
+<h2>Aegis Finance — Decisions</h2>
+
+<p>&gt; Distilled decision-claims (LLM-extracted, with rationale + source quote).</p>
+
+<h3>Build the ticker-to-sector map from three prioritized sources</h3>
+
+<ul>
+<li><strong>Why:</strong> cover large/mid-caps already in Aegis (config universe), the PI reference universe, and five small-cap biotech tickers from Murat&#x27;s personal portfolio too small for either reference universe</li>
+<li><strong>Source:</strong> <code>git:aegis-finance@9c2a0e5:docs/phase2_decisions.md#L5-L5</code></li>
+<li><strong>Quote:</strong> “<code>real_analyzer._get_sector_map()</code> builds a ticker-to-sector mapping from three sources,”</li>
+</ul>
+
+<h3>Resolve user-added personal tickers&#x27; sectors via yfinance + a new ticker_metadata cache in Phase 5.5</h3>
+
+<ul>
+<li><strong>Why:</strong> otherwise unknown tickers return &#x27;Other&#x27;, so sector concentration flags misfire; it is a ~20-line addition, not a redesign</li>
+<li><strong>Source:</strong> <code>git:aegis-finance@9c2a0e5:docs/phase2_decisions.md#L34-L34</code></li>
+<li><strong>Quote:</strong> “This is a ~20-line addition to the personal lane ingest path, not a redesign.”</li>
+</ul>
+
+<h3>Defer the catalyst calendar and did-you-know panel to Phase 5 frontend rather than dropping them</h3>
+
+<ul>
+<li><strong>Why:</strong> catalyst data already exists via existing endpoints and the did-you-know raw data is already computed; only frontend narrative/compare logic remains</li>
+<li><strong>Source:</strong> <code>git:aegis-finance@9c2a0e5:docs/phase2_decisions.md#L40-L40</code></li>
+<li><strong>Quote:</strong> “Both are <strong>deferred to Phase 5 (frontend)</strong>, not dropped.”</li>
+</ul>
+
+<h3>Compute max drawdown inline from cumulative returns instead of delegating to drawdown_analyzer</h3>
+
+<ul>
+<li><strong>Why:</strong> the analyzer expects an absolute price series and returns a format needing conversion; the inline (cum/peak-1).min() is 4 lines, no conversion, and yields [-1,0] which MetricPack expects</li>
+<li><strong>Source:</strong> <code>git:aegis-finance@9c2a0e5:docs/phase2_decisions.md#L54-L54</code></li>
+<li><strong>Quote:</strong> “Drawdown is computed inline from cumulative returns rather than delegating to”</li>
+</ul>
+
+<h3>Use raw SQLite with WAL mode for the portfolio-intelligence persistence (not a heavier DB)</h3>
+
+<ul>
+<li><strong>Why:</strong> the rest of Aegis is stateless; persistence is needed only for paper-portfolio state, trade log, audit log, and personal decisions</li>
+<li><strong>Source:</strong> <code>git:aegis-finance@9c2a0e5:backend/db.py#L5-L5</code></li>
+<li><strong>Quote:</strong> “Raw SQLite with WAL mode for the portfolio intelligence subsystem.”</li>
+</ul>
+
+<h3>Use forward-only schema versioning with no Alembic</h3>
+
+<ul>
+<li><strong>Why:</strong> Alembic is overkill for 6 tables</li>
+<li><strong>Source:</strong> <code>git:aegis-finance@9c2a0e5:backend/db.py#L6-L6</code></li>
+<li><strong>Quote:</strong> “Forward-only schema versioning (no Alembic — overkill for 6 tables).”</li>
+</ul>
+
+<h3>Pick the final crash model per horizon by held-out Brier score</h3>
+
+<ul>
+<li><strong>Why:</strong> use whichever calibrates better on held-out data (typically LightGBM 3m, Logistic 12m)</li>
+<li><strong>Source:</strong> <code>git:aegis-finance@9c2a0e5:docs/METHODOLOGY.md#L44-L44</code></li>
+<li><strong>Quote:</strong> “The final prediction is the model with better held-out Brier score (typically LightGBM for 3-month, Logistic for 12-month).”</li>
+</ul>
+
+<h3>Validate with a walk-forward expanding window with purge gaps and periodic retrain</h3>
+
+<ul>
+<li><strong>Why:</strong> prevents data leakage; purge gaps 70/140/265 days for 3/6/12m, retrain every 252 days</li>
+<li><strong>Source:</strong> <code>git:aegis-finance@9c2a0e5:docs/METHODOLOGY.md#L48-L48</code></li>
+<li><strong>Quote:</strong> “<strong>Walk-forward expanding window</strong> (no data leakage):”</li>
+</ul>
+
+<h3>Blend HMM regime probabilities into Monte Carlo drift and volatility at mixing weight 0.15</h3>
+
+<ul>
+<li><strong>Why:</strong> make the simulation regime-aware; weight is configurable</li>
+<li><strong>Source:</strong> <code>git:aegis-finance@9c2a0e5:docs/METHODOLOGY.md#L115-L115</code></li>
+<li><strong>Quote:</strong> “HMM regime probabilities blend into the Monte Carlo drift and volatility with a mixing weight of 0.15 (configurable).”</li>
+</ul>
+
+<h3>Keep services stateless — no mutable global state except cache</h3>
+
+<ul>
+<li><strong>Why:</strong> stateless services; this is why only the portfolio-intelligence subsystem needs a database</li>
+<li><strong>Source:</strong> <code>git:aegis-finance@9c2a0e5:CLAUDE.md#L201-L201</code></li>
+<li><strong>Quote:</strong> “Keep services stateless — no mutable global state except cache”</li>
+</ul>
+
+<h3>Use purged CV with embargo for all ML validation</h3>
+
+<ul>
+<li><strong>Why:</strong> prevent leakage in financial ML (Lopez de Prado)</li>
+<li><strong>Source:</strong> <code>git:aegis-finance@9c2a0e5:CLAUDE.md#L202-L202</code></li>
+<li><strong>Quote:</strong> “Use purged CV with embargo for all ML validation”</li>
+</ul>
+
+<h3>Use walk-forward temporal splits, never random k-fold</h3>
+
+<ul>
+<li><strong>Why:</strong> financial data is temporal; random k-fold leaks future information</li>
+<li><strong>Source:</strong> <code>git:aegis-finance@9c2a0e5:CLAUDE.md#L203-L203</code></li>
+<li><strong>Quote:</strong> “Use walk-forward temporal splits (never random k-fold)”</li>
+</ul>
+
+<h3>Enforce monotonicity on multi-horizon crash predictions (3m &lt;= 6m &lt;= 12m)</h3>
+
+<ul>
+<li><strong>Why:</strong> longer horizons must carry at least as much crash probability</li>
+<li><strong>Source:</strong> <code>git:aegis-finance@9c2a0e5:CLAUDE.md#L205-L205</code></li>
+<li><strong>Quote:</strong> “Enforce monotonicity on multi-horizon predictions (3m ≤ 6m ≤ 12m)”</li>
+</ul></div></details><details class="page" id="page-aegis-finance-history"><summary><strong>Aegis Finance — Commit History</strong> <span class="meta">aegis-finance · history · updated 2026-07-10T16:18:37+00:00 · <a href="pages/aegis-finance-history.md">raw</a></span></summary><div class="page-body"><p>---</p>
+<p>id: aegis-finance-history</p>
+<p>title: Aegis Finance — Commit History</p>
+<p>tier: 2</p>
+<p>type: history</p>
+<p>project: aegis-finance</p>
+<p>aliases:</p>
+<ul>
+<li>aegis-finance history</li>
+<li>Aegis Finance history</li>
+</ul>
+<p>tags:</p>
+<ul>
+<li>project</li>
+<li>history</li>
+</ul>
+<p>sources:</p>
+<ul>
+<li>git:aegis-finance@bb47895:&lt;git-log&gt;</li>
+</ul>
+<p>source_root: ~\aegis-finance</p>
+<p>status: active</p>
+<p>created: &#x27;2026-07-10T16:18:37+00:00&#x27;</p>
+<p>updated: &#x27;2026-07-10T16:18:37+00:00&#x27;</p>
+<p>claims: []</p>
+<p>---</p>
+
+<h2>Aegis Finance — Commit History</h2>
+
+<ul>
+<li>Total commits: <strong>342</strong></li>
+<li>Active range: 2026-03-28 → 2026-07-11</li>
+</ul>
+
+<h3>Top contributors</h3>
+
+<ul>
+<li>340	Murathan &lt;[email redacted]&gt;</li>
+<li>1	Murathan &lt;[email redacted]&gt;</li>
+<li>1	Murathanx12 &lt;[email redacted]&gt;</li>
+</ul>
+
+<h3>Recent commits (last 15)</h3>
+
+<ul>
+<li>bb47895 2026-07-11 docs(knowledge): quant-investor lessons — the brain&#x27;s learning module</li>
+<li>10d5635 2026-07-11 fix(fragility_candidates): ipo_issuance read hits.total.value — false-zero in prod</li>
+<li>6f5f089 2026-07-10 docs: postmortem — deep research + PEAD/quality/guidance builds</li>
+<li>196b124 2026-07-10 feat(portfolio): per-position guidance — levels, signals, behavioral nudges</li>
+<li>200b553 2026-07-10 feat(pi): TRIAL-QUALITY-IC — gross profitability (GP/A), forward collector</li>
+<li>848cc43 2026-07-10 feat(pi): TRIAL-PEAD-IC — earnings-surprise drift score, forward collector</li>
+<li>c9624c1 2026-07-10 fix(explain_move): coerce numpy/pandas scalars before serialization</li>
+<li>4d4ff70 2026-07-10 feat(stock): explain-the-move — evidence dossier + key-optional narration</li>
+<li>169fdab 2026-07-09 feat(ui): Risk Watch page — fragility, candidates, alerts in one glance</li>
+<li>bdb6e4f 2026-07-08 fix(pi): H5 first pass — silent swallowers in the PI services made loud</li>
+<li>2c12bbe 2026-07-08 feat(pi): conviction calibration scorecard — grade the judgment (V5)</li>
+<li>944cddf 2026-07-08 feat(skills): five Aegis discipline skills — paid-for lessons as procedures</li>
+<li>1699d93 2026-07-08 feat(pi): V4 alert engine core — change rules, cooldown, alert log</li>
+<li>1148a1a 2026-07-08 feat(pi): wire 13F collector into the daily check + B9 FRED stress candidates</li>
+<li>98ca861 2026-07-08 fix(crash_model): strip the Booster-level best_score copy too (CI determinism)</li>
+</ul></div></details><details class="page" id="page-aegis-finance-overview"><summary><strong>Aegis Finance — Overview</strong> <span class="meta">aegis-finance · overview · updated 2026-07-10T16:18:37+00:00 · <a href="pages/aegis-finance-overview.md">raw</a></span></summary><div class="page-body"><p>---</p>
+<p>id: aegis-finance-overview</p>
+<p>title: Aegis Finance — Overview</p>
+<p>tier: 2</p>
+<p>type: overview</p>
+<p>project: aegis-finance</p>
+<p>aliases:</p>
+<ul>
+<li>aegis-finance</li>
+<li>Aegis Finance</li>
+<li>aegis</li>
+</ul>
+<p>tags:</p>
+<ul>
+<li>project</li>
+<li>overview</li>
+</ul>
+<p>sources:</p>
+<ul>
+<li>git:aegis-finance@bb47895:README.md</li>
+<li>git:aegis-finance@bb47895:ABSTRACT.md</li>
+</ul>
+<p>source_root: ~\aegis-finance</p>
+<p>status: active</p>
+<p>created: &#x27;2026-07-10T16:18:37+00:00&#x27;</p>
+<p>updated: &#x27;2026-07-10T16:18:37+00:00&#x27;</p>
+<p>claims:</p>
+<ul>
+<li>id: aegis-finance-desc</li>
+</ul>
+<p>  text: Free, open-source market intelligence platform combining ML crash prediction,</p>
+<p>    Monte Carlo simulation, and portfolio construction in a web dashboard.</p>
+<p>  source: git:aegis-finance@bb47895:README.md#L3-L3</p>
+<p>  status: active</p>
+<ul>
+<li>id: aegis-finance-cap-00</li>
+</ul>
+<p>  text: &#x27;<strong>Crash Probability</strong> — LightGBM + Logistic Regression blend predicting 20%+</p>
+<p>    drawdown probability over 3, 6, and 12-month horizons. Validated with purged cross-validation</p>
+<p>    and walk-forward backtesting (3m Brier score: 0.046; see [Known Limitations](#known-limitations)</p>
+<p>    for horizon accuracy details).&#x27;</p>
+<p>  source: git:aegis-finance@bb47895:README.md#L9-L9</p>
+<p>  status: active</p>
+<ul>
+<li>id: aegis-finance-cap-01</li>
+</ul>
+<p>  text: &#x27;<strong>Monte Carlo Projections</strong> — Jump-diffusion simulation (Merton 1976) with</p>
+<p>    GJR-GARCH volatility, Student-t innovations, and antithetic variates. 10,000 paths</p>
+<p>    default. Validated against Goldman Sachs, JPMorgan, and Vanguard 10-year return</p>
+<p>    assumptions ([docs/REALITY_CHECK.md](docs/REALITY_CHECK.md)).&#x27;</p>
+<p>  source: git:aegis-finance@bb47895:README.md#L10-L10</p>
+<p>  status: active</p>
+<ul>
+<li>id: aegis-finance-cap-02</li>
+</ul>
+<p>  text: &#x27;<strong>Portfolio Builder</strong> — Black-Litterman, Hierarchical Risk Parity (HRP),</p>
+<p>    and template methods with Ledoit-Wolf covariance shrinkage. 5 goal profiles (preservation,</p>
+<p>    income, growth, aggressive growth, retirement). Uses sector ETFs, not individual</p>
+<p>    stock selection.&#x27;</p>
+<p>  source: git:aegis-finance@bb47895:README.md#L11-L11</p>
+<p>  status: active</p>
+<ul>
+<li>id: aegis-finance-cap-03</li>
+</ul>
+<p>  text: &#x27;<strong>Macro Risk Dashboard</strong> — 9-factor composite risk score from FRED data (yield</p>
+<p>    curve, NFCI, initial claims, VIX, credit spreads, etc.) with regime classification</p>
+<p>    (Bull/Bear/Volatile/Neutral).&#x27;</p>
+<p>  source: git:aegis-finance@bb47895:README.md#L12-L12</p>
+<p>  status: active</p>
+<ul>
+<li>id: aegis-finance-cap-04</li>
+</ul>
+<p>  text: &#x27;<strong>Stock Analysis</strong> — Per-ticker Monte Carlo projections with beta-adjusted</p>
+<p>    crash frequency, analyst target blending, and SHAP explainability showing which</p>
+<p>    factors drive each prediction.&#x27;</p>
+<p>  source: git:aegis-finance@bb47895:README.md#L13-L13</p>
+<p>  status: active</p>
+<ul>
+<li>id: aegis-finance-cap-05</li>
+</ul>
+<p>  text: &#x27;<strong>Stock Screener</strong> — 30+ stocks with Buy/Hold/Sell signals, Sharpe ratios,</p>
+<p>    and sector filtering.&#x27;</p>
+<p>  source: git:aegis-finance@bb47895:README.md#L14-L14</p>
+<p>  status: active</p>
+<ul>
+<li>id: aegis-finance-cap-06</li>
+</ul>
+<p>  text: &#x27;<strong>Sector Analysis</strong> — 11 S&amp;P 500 sectors ranked by risk-adjusted expected</p>
+<p>    return.&#x27;</p>
+<p>  source: git:aegis-finance@bb47895:README.md#L15-L15</p>
+<p>  status: active</p>
+<ul>
+<li>id: aegis-finance-cap-07</li>
+</ul>
+<p>  text: &#x27;<strong>News Intelligence</strong> — GDELT event scoring with FinBERT sentiment analysis</p>
+<p>    and optional DeepSeek AI summaries.&#x27;</p>
+<p>  source: git:aegis-finance@bb47895:README.md#L16-L16</p>
+<p>  status: active</p>
+<ul>
+<li>id: aegis-finance-cap-08</li>
+</ul>
+<p>  text: &#x27;<strong>Retirement Planner</strong> — Compound growth projections with inflation adjustment.&#x27;</p>
+<p>  source: git:aegis-finance@bb47895:README.md#L17-L17</p>
+<p>  status: active</p>
+<ul>
+<li>id: aegis-finance-cap-09</li>
+</ul>
+<p>  text: &#x27;<strong>Net Liquidity Tracker</strong> — Fed balance sheet (WALCL - TGA - RRP) as a market</p>
+<p>    indicator.&#x27;</p>
+<p>  source: git:aegis-finance@bb47895:README.md#L18-L18</p>
+<p>  status: active</p>
+<ul>
+<li>id: aegis-finance-cap-10</li>
+</ul>
+<p>  text: &#x27;<strong>Data Quality Monitoring</strong> — Automated staleness, range, and completeness</p>
+<p>    checks.&#x27;</p>
+<p>  source: git:aegis-finance@bb47895:README.md#L19-L19</p>
+<p>  status: active</p>
+<ul>
+<li>id: aegis-finance-cap-11</li>
+</ul>
+<p>  text: &#x27;<strong>External Validation</strong> — Cross-checks crash predictions against LEI, SLOOS,</p>
+<p>    Fed Funds, and Consumer Sentiment.&#x27;</p>
+<p>  source: git:aegis-finance@bb47895:README.md#L20-L20</p>
+<p>  status: active</p>
+<p>---</p>
+
+<h2>Aegis Finance</h2>
+
+<p>&gt; Free, open-source market intelligence platform combining ML crash prediction, Monte Carlo simulation, and portfolio construction in a web dashboard.</p>
+
+<h3>Capabilities</h3>
+
+<ul>
+<li><strong>Crash Probability</strong> — LightGBM + Logistic Regression blend predicting 20%+ drawdown probability over 3, 6, and 12-month horizons. Validated with purged cross-validation and walk-forward backtesting (3m Brier score: 0.046; see [Known Limitations](#known-limitations) for horizon accuracy details).</li>
+<li><strong>Monte Carlo Projections</strong> — Jump-diffusion simulation (Merton 1976) with GJR-GARCH volatility, Student-t innovations, and antithetic variates. 10,000 paths default. Validated against Goldman Sachs, JPMorgan, and Vanguard 10-year return assumptions ([docs/REALITY_CHECK.md](docs/REALITY_CHECK.md)).</li>
+<li><strong>Portfolio Builder</strong> — Black-Litterman, Hierarchical Risk Parity (HRP), and template methods with Ledoit-Wolf covariance shrinkage. 5 goal profiles (preservation, income, growth, aggressive growth, retirement). Uses sector ETFs, not individual stock selection.</li>
+<li><strong>Macro Risk Dashboard</strong> — 9-factor composite risk score from FRED data (yield curve, NFCI, initial claims, VIX, credit spreads, etc.) with regime classification (Bull/Bear/Volatile/Neutral).</li>
+<li><strong>Stock Analysis</strong> — Per-ticker Monte Carlo projections with beta-adjusted crash frequency, analyst target blending, and SHAP explainability showing which factors drive each prediction.</li>
+<li><strong>Stock Screener</strong> — 30+ stocks with Buy/Hold/Sell signals, Sharpe ratios, and sector filtering.</li>
+<li><strong>Sector Analysis</strong> — 11 S&amp;P 500 sectors ranked by risk-adjusted expected return.</li>
+<li><strong>News Intelligence</strong> — GDELT event scoring with FinBERT sentiment analysis and optional DeepSeek AI summaries.</li>
+<li><strong>Retirement Planner</strong> — Compound growth projections with inflation adjustment.</li>
+<li><strong>Net Liquidity Tracker</strong> — Fed balance sheet (WALCL - TGA - RRP) as a market indicator.</li>
+<li><strong>Data Quality Monitoring</strong> — Automated staleness, range, and completeness checks.</li>
+<li><strong>External Validation</strong> — Cross-checks crash predictions against LEI, SLOOS, Fed Funds, and Consumer Sentiment.</li>
+</ul>
+
+<h3>README sections</h3>
+
+<ul>
+<li>What It Does</li>
+<li>What It Is Not</li>
+<li>Comparison to Similar Projects</li>
+<li>Known Limitations</li>
+<li>Quick Start</li>
+<li>Prerequisites</li>
+<li>Setup</li>
+<li>Train the Crash Model (optional, ~5-10 min)</li>
+<li>Docker</li>
+<li>Commands Reference</li>
+<li>Development</li>
+<li>Testing</li>
+<li>ML Engine (Offline)</li>
+<li>Docker</li>
+<li>API Endpoints</li>
+<li>API Testing (curl)</li>
+<li>Data Sources</li>
+<li>API Keys</li>
+<li>Tech Stack</li>
+<li>Architecture</li>
+<li>Deployment</li>
+<li>Project Structure</li>
+<li>Methodology Status</li>
+<li>Built With / References</li>
+<li>Research &amp; Validation</li>
+<li>Free Hosting</li>
+<li>Contributing</li>
+<li>Disclaimer</li>
+<li>License</li>
+</ul></div></details><details class="page" id="page-aegis-finance-structure"><summary><strong>Aegis Finance — Structure</strong> <span class="meta">aegis-finance · structure · updated 2026-07-10T16:18:37+00:00 · <a href="pages/aegis-finance-structure.md">raw</a></span></summary><div class="page-body"><p>---</p>
+<p>id: aegis-finance-structure</p>
+<p>title: Aegis Finance — Structure</p>
+<p>tier: 2</p>
+<p>type: structure</p>
+<p>project: aegis-finance</p>
+<p>aliases:</p>
+<ul>
+<li>aegis-finance structure</li>
+<li>Aegis Finance structure</li>
+</ul>
+<p>tags:</p>
+<ul>
+<li>project</li>
+<li>structure</li>
+</ul>
+<p>sources:</p>
+<ul>
+<li>git:aegis-finance@bb47895:.</li>
+</ul>
+<p>source_root: ~\aegis-finance</p>
+<p>status: active</p>
+<p>created: &#x27;2026-07-10T16:18:37+00:00&#x27;</p>
+<p>updated: &#x27;2026-07-10T16:18:37+00:00&#x27;</p>
+<p>claims: []</p>
+<p>---</p>
+
+<h2>Aegis Finance — Structure</h2>
+
+<p>Tracked files: <strong>917</strong> (source: <code>git ls-files</code>, secrets/ignored excluded).</p>
+
+<h3>Module map</h3>
+
+<ul>
+<li><strong>(root)</strong> — .dockerignore, .env.example, .gitignore, ABSTRACT.md, CLAUDE.md, CONTRIBUTING.md, LICENSE, NEGATIVE_RESULTS.md, README.md, REFERENCES.md, docker-compose.yml, pytest.ini … (+2 more)</li>
+<li><strong>.claude</strong> — commands/, skills/</li>
+<li><strong>.github</strong> — workflows/</li>
+<li><strong>backend</strong> — BACKTEST_RESULTS.md, Dockerfile, __init__.py, cache.py, config.py, data/, db.py, main.py, middleware.py, models/, observability.py, requirements.txt … (+4 more)</li>
+<li><strong>docs</strong> — BACKLOG.md, CANON.md, CAPABILITY_MATRIX.md, DATA_INTEGRITY.md, DATA_OPTIONS.md, DEEP_RESEARCH_2026-06-14_DECISION.md, EVOLUTION_LOOP_PLAN.md, FACTOR_MENU.md, FACTOR_VALIDATION.md, FINDINGS.md, FRAGILITY_RESEARCH_2026-06-14.md, IMPROVEMENT_BACKLOG.md … (+23 more)</li>
+<li><strong>engine</strong> — __init__.py, autoresearch/, requirements.txt, research/, training/, validation/</li>
+<li><strong>frontend</strong> — .dockerignore, .gitignore, AGENTS.md, CLAUDE.md, Dockerfile, README.md, components.json, eslint.config.mjs, next.config.ts, package-lock.json, package.json, postcss.config.mjs … (+4 more)</li>
+<li><strong>lab</strong> — README.md, baseline_failures.txt, build_prompt.py, compare_results.py, data_generator.py, experiments/, health_probe.py, hypotheses.py, quality.py, rd_loop.py, robustness.py, run_lab.sh … (+3 more)</li>
+<li><strong>scripts</strong> — log_conviction.py, seed_p1_6_lanes.py</li>
+<li><strong>sdk</strong> — README.md, aegis/, pyproject.toml, tests/</li>
+</ul>
+
+<h3>File composition</h3>
+
+<ul>
+<li><code>.py</code> × 379</li>
+<li><code>.txt</code> × 247</li>
+<li><code>.md</code> × 171</li>
+<li><code>.tsx</code> × 67</li>
+<li><code>.ts</code> × 14</li>
+<li><code>.json</code> × 10</li>
+<li><code>.(none)</code> × 7</li>
+<li><code>.svg</code> × 5</li>
+<li><code>.yaml</code> × 4</li>
+<li><code>.yml</code> × 2</li>
+<li><code>.mjs</code> × 2</li>
+<li><code>.toml</code> × 2</li>
+<li><code>.example</code> × 1</li>
+<li><code>.csv</code> × 1</li>
+<li><code>.png</code> × 1</li>
+</ul></div></details><details class="page" id="page-aegis-quant-knowledge-overview"><summary><strong>KNOWLEDGE — Overview</strong> <span class="meta">aegis-quant-knowledge · overview · updated 2026-07-10T16:19:00+00:00 · <a href="pages/aegis-quant-knowledge-overview.md">raw</a></span></summary><div class="page-body"><p>---</p>
+<p>id: aegis-quant-knowledge-overview</p>
+<p>title: KNOWLEDGE — Overview</p>
+<p>tier: 2</p>
+<p>type: overview</p>
+<p>project: aegis-quant-knowledge</p>
+<p>aliases:</p>
+<ul>
+<li>aegis-quant-knowledge</li>
+<li>KNOWLEDGE</li>
+<li>aegis</li>
+</ul>
+<p>tags:</p>
+<ul>
+<li>project</li>
+<li>overview</li>
+<li>folder</li>
+</ul>
+<p>sources:</p>
+<ul>
+<li>folder:aegis-quant-knowledge:.</li>
+</ul>
+<p>source_root: ~\aegis-finance\docs\KNOWLEDGE</p>
+<p>status: active</p>
+<p>created: &#x27;2026-07-10T16:19:00+00:00&#x27;</p>
+<p>updated: &#x27;2026-07-10T16:19:00+00:00&#x27;</p>
+<p>claims:</p>
+<ul>
+<li>id: aegis-quant-knowledge-doc-00</li>
+</ul>
+<p>  text: &#x27;quant-investor-lessons.md: Quant &amp; Investor Lessons — the brain&#x27;&#x27;s learning</p>
+<p>    module&#x27;</p>
+<p>  source: folder:aegis-quant-knowledge:quant-investor-lessons.md#L1</p>
+<p>  status: active</p>
+<p>---</p>
+
+<h2>KNOWLEDGE</h2>
+
+<p>&gt; Local folder ingested by Optimus (folder channel).</p>
+
+<h3>Activity</h3>
+
+<ul>
+<li>Tracked files: <strong>1</strong></li>
+<li>Most recent edit: 2026-07-11</li>
+</ul></div></details><details class="page" id="page-aegis-quant-knowledge-structure"><summary><strong>KNOWLEDGE — Structure</strong> <span class="meta">aegis-quant-knowledge · structure · updated 2026-07-10T16:19:00+00:00 · <a href="pages/aegis-quant-knowledge-structure.md">raw</a></span></summary><div class="page-body"><p>---</p>
+<p>id: aegis-quant-knowledge-structure</p>
+<p>title: KNOWLEDGE — Structure</p>
+<p>tier: 2</p>
+<p>type: structure</p>
+<p>project: aegis-quant-knowledge</p>
+<p>aliases:</p>
+<ul>
+<li>aegis-quant-knowledge structure</li>
+</ul>
+<p>tags:</p>
+<ul>
+<li>project</li>
+<li>structure</li>
+<li>folder</li>
+</ul>
+<p>sources:</p>
+<ul>
+<li>folder:aegis-quant-knowledge:.</li>
+</ul>
+<p>source_root: ~\aegis-finance\docs\KNOWLEDGE</p>
+<p>status: active</p>
+<p>created: &#x27;2026-07-10T16:19:00+00:00&#x27;</p>
+<p>updated: &#x27;2026-07-10T16:19:00+00:00&#x27;</p>
+<p>claims: []</p>
+<p>---</p>
+
+<h2>KNOWLEDGE — Structure</h2>
+
+<p>Files: <strong>1</strong> (folder channel; binaries counted, not read; junk dirs + dotfiles skipped).</p>
+
+<h3>Top-level</h3>
+
+<ul>
+<li><strong>(root)</strong> — quant-investor-lessons.md</li>
+</ul>
+
+<h3>File composition</h3>
+
+<ul>
+<li><code>.md</code> × 1</li>
+</ul></div></details>
+
+<h2>For AI agents</h2>
+<div class="card">
+  <p>Everything public on this page is machine-readable, English, CORS-open:</p>
+  <ul>
+    <li><code>GET /brain.json</code> — stats, graph, public pages (full markdown), retrieval demos</li>
+    <li><code>GET /llms.txt</code> — plain-text index of what is here and how to use it</li>
+    <li><code>GET /pages/&lt;id&gt;.md</code> — each public page raw</li>
+  </ul>
+  <pre><code>curl -s https://optimus-brain-alpha.vercel.app/brain.json | jq '.stats'</code></pre>
+  <p style="font-size:14px; color: var(--ink-2);">This export is a static
+  snapshot — it changes only when the showcase is rebuilt, and the build ONLY
+  reads the brain (the store is opened read-only).</p>
+</div>
+
+<footer>
+  Snapshot of brain @ git <code>5e712e5</code> · built 2026-07-11 17:21 UTC ·
+  Optimus is read-only here; the live brain runs locally with Aegis Finance.
+</footer>
+</main>
+
+<script>
+const GRAPH = {"nodes": [{"id": "aegis-finance-decisions", "title": "Aegis Finance \u2014 Decisions", "type": "decisions", "project": "aegis-finance", "claims": 13, "public": true, "kind": "page"}, {"id": "aegis-finance-history", "title": "Aegis Finance \u2014 Commit History", "type": "history", "project": "aegis-finance", "claims": 0, "public": true, "kind": "page"}, {"id": "aegis-finance-overview", "title": "Aegis Finance \u2014 Overview", "type": "overview", "project": "aegis-finance", "claims": 13, "public": true, "kind": "page"}, {"id": "aegis-finance-structure", "title": "Aegis Finance \u2014 Structure", "type": "structure", "project": "aegis-finance", "claims": 0, "public": true, "kind": "page"}, {"id": "aegis-quant-knowledge-overview", "title": "KNOWLEDGE \u2014 Overview", "type": "overview", "project": "aegis-quant-knowledge", "claims": 1, "public": true, "kind": "page"}, {"id": "aegis-quant-knowledge-structure", "title": "KNOWLEDGE \u2014 Structure", "type": "structure", "project": "aegis-quant-knowledge", "claims": 0, "public": true, "kind": "page"}, {"id": "private-1", "title": null, "type": "overview", "project": "private project 1", "claims": 24, "public": false, "kind": "page"}, {"id": "private-2", "title": null, "type": "structure", "project": "private project 1", "claims": 0, "public": false, "kind": "page"}, {"id": "private-3", "title": null, "type": "disposition", "project": null, "claims": 0, "public": false, "kind": "page"}, {"id": "private-4", "title": null, "type": "overview", "project": "private project 2", "claims": 41, "public": false, "kind": "page"}, {"id": "private-5", "title": null, "type": "structure", "project": "private project 2", "claims": 0, "public": false, "kind": "page"}, {"id": "private-6", "title": null, "type": "overview", "project": "private project 3", "claims": 18, "public": false, "kind": "page"}, {"id": "private-7", "title": null, "type": "structure", "project": "private project 3", "claims": 0, "public": false, "kind": "page"}, {"id": "private-8", "title": null, "type": "identity", "project": null, "claims": 0, "public": false, "kind": "page"}, {"id": "private-9", "title": null, "type": "overview", "project": "private project 4", "claims": 9, "public": false, "kind": "page"}, {"id": "private-10", "title": null, "type": "structure", "project": "private project 4", "claims": 0, "public": false, "kind": "page"}, {"id": "private-11", "title": null, "type": "overview", "project": "private project 5", "claims": 23, "public": false, "kind": "page"}, {"id": "private-12", "title": null, "type": "structure", "project": "private project 5", "claims": 0, "public": false, "kind": "page"}, {"id": "private-13", "title": null, "type": "overview", "project": "private project 6", "claims": 6, "public": false, "kind": "page"}, {"id": "private-14", "title": null, "type": "structure", "project": "private project 6", "claims": 0, "public": false, "kind": "page"}, {"id": "fact-1", "kind": "claim", "parent": "aegis-finance-overview", "public": true, "text": "**Crash Probability** \u2014 LightGBM + Logistic Regression blend predicting 20%+ drawdown probability over 3, 6, and 12-month horizons. Validated with purged cross-validation and walk-forward backtesting (3m Brier score: 0.046; see [Known Limitations](#known-limitations) for horizon "}, {"id": "fact-2", "kind": "claim", "parent": "aegis-finance-overview", "public": true, "text": "**Monte Carlo Projections** \u2014 Jump-diffusion simulation (Merton 1976) with GJR-GARCH volatility, Student-t innovations, and antithetic variates. 10,000 paths default. Validated against Goldman Sachs, JPMorgan, and Vanguard 10-year return assumptions ([docs/REALITY_CHECK.md](docs/"}, {"id": "fact-3", "kind": "claim", "parent": "aegis-finance-overview", "public": true, "text": "**Portfolio Builder** \u2014 Black-Litterman, Hierarchical Risk Parity (HRP), and template methods with Ledoit-Wolf covariance shrinkage. 5 goal profiles (preservation, income, growth, aggressive growth, retirement). Uses sector ETFs, not individual stock selection."}, {"id": "fact-4", "kind": "claim", "parent": "aegis-finance-overview", "public": true, "text": "**Macro Risk Dashboard** \u2014 9-factor composite risk score from FRED data (yield curve, NFCI, initial claims, VIX, credit spreads, etc.) with regime classification (Bull/Bear/Volatile/Neutral)."}, {"id": "fact-5", "kind": "claim", "parent": "aegis-finance-overview", "public": true, "text": "**Stock Analysis** \u2014 Per-ticker Monte Carlo projections with beta-adjusted crash frequency, analyst target blending, and SHAP explainability showing which factors drive each prediction."}, {"id": "fact-6", "kind": "claim", "parent": "aegis-finance-overview", "public": true, "text": "**Stock Screener** \u2014 30+ stocks with Buy/Hold/Sell signals, Sharpe ratios, and sector filtering."}, {"id": "fact-7", "kind": "claim", "parent": "aegis-finance-overview", "public": true, "text": "**Sector Analysis** \u2014 11 S&P 500 sectors ranked by risk-adjusted expected return."}, {"id": "fact-8", "kind": "claim", "parent": "aegis-finance-overview", "public": true, "text": "**News Intelligence** \u2014 GDELT event scoring with FinBERT sentiment analysis and optional DeepSeek AI summaries."}, {"id": "fact-9", "kind": "claim", "parent": "aegis-finance-overview", "public": true, "text": "**Retirement Planner** \u2014 Compound growth projections with inflation adjustment."}, {"id": "fact-10", "kind": "claim", "parent": "aegis-finance-overview", "public": true, "text": "**Net Liquidity Tracker** \u2014 Fed balance sheet (WALCL - TGA - RRP) as a market indicator."}, {"id": "fact-11", "kind": "claim", "parent": "aegis-finance-overview", "public": true, "text": "**Data Quality Monitoring** \u2014 Automated staleness, range, and completeness checks."}, {"id": "fact-12", "kind": "claim", "parent": "aegis-finance-overview", "public": true, "text": "**External Validation** \u2014 Cross-checks crash predictions against LEI, SLOOS, Fed Funds, and Consumer Sentiment."}, {"id": "fact-13", "kind": "claim", "parent": "aegis-finance-decisions", "public": true, "text": "Build the ticker-to-sector map from three prioritized sources"}, {"id": "fact-14", "kind": "claim", "parent": "aegis-finance-decisions", "public": true, "text": "Resolve user-added personal tickers' sectors via yfinance + a new ticker_metadata cache in Phase 5.5"}, {"id": "fact-15", "kind": "claim", "parent": "aegis-finance-decisions", "public": true, "text": "Defer the catalyst calendar and did-you-know panel to Phase 5 frontend rather than dropping them"}, {"id": "fact-16", "kind": "claim", "parent": "aegis-finance-decisions", "public": true, "text": "Compute max drawdown inline from cumulative returns instead of delegating to drawdown_analyzer"}, {"id": "fact-17", "kind": "claim", "parent": "aegis-finance-decisions", "public": true, "text": "Use raw SQLite with WAL mode for the portfolio-intelligence persistence (not a heavier DB)"}, {"id": "fact-18", "kind": "claim", "parent": "aegis-finance-decisions", "public": true, "text": "Use forward-only schema versioning with no Alembic"}, {"id": "fact-19", "kind": "claim", "parent": "aegis-finance-decisions", "public": true, "text": "Pick the final crash model per horizon by held-out Brier score"}, {"id": "fact-20", "kind": "claim", "parent": "aegis-finance-decisions", "public": true, "text": "Validate with a walk-forward expanding window with purge gaps and periodic retrain"}, {"id": "fact-21", "kind": "claim", "parent": "aegis-finance-decisions", "public": true, "text": "Blend HMM regime probabilities into Monte Carlo drift and volatility at mixing weight 0.15"}, {"id": "fact-22", "kind": "claim", "parent": "aegis-finance-decisions", "public": true, "text": "Keep services stateless \u2014 no mutable global state except cache"}, {"id": "fact-23", "kind": "claim", "parent": "aegis-finance-decisions", "public": true, "text": "Use purged CV with embargo for all ML validation"}, {"id": "fact-24", "kind": "claim", "parent": "aegis-finance-decisions", "public": true, "text": "Use walk-forward temporal splits, never random k-fold"}, {"id": "fact-25", "kind": "claim", "parent": "aegis-finance-decisions", "public": true, "text": "Enforce monotonicity on multi-horizon crash predictions (3m <= 6m <= 12m)"}, {"id": "fact-26", "kind": "claim", "parent": "aegis-finance-overview", "public": true, "text": "Free, open-source market intelligence platform combining ML crash prediction, Monte Carlo simulation, and portfolio construction in a web dashboard."}, {"id": "fact-27", "kind": "claim", "parent": "aegis-quant-knowledge-overview", "public": true, "text": "quant-investor-lessons.md: Quant & Investor Lessons \u2014 the brain's learning module"}, {"id": "fact-28", "kind": "claim", "parent": "private-1", "public": false, "text": null}, {"id": "fact-29", "kind": "claim", "parent": "private-1", "public": false, "text": null}, {"id": "fact-30", "kind": "claim", "parent": "private-1", "public": false, "text": null}, {"id": "fact-31", "kind": "claim", "parent": "private-1", "public": false, "text": null}, {"id": "fact-32", "kind": "claim", "parent": "private-1", "public": false, "text": null}, {"id": "fact-33", "kind": "claim", "parent": "private-1", "public": false, "text": null}, {"id": "fact-34", "kind": "claim", "parent": "private-1", "public": false, "text": null}, {"id": "fact-35", "kind": "claim", "parent": "private-1", "public": false, "text": null}, {"id": "fact-36", "kind": "claim", "parent": "private-1", "public": false, "text": null}, {"id": "fact-37", "kind": "claim", "parent": "private-1", "public": false, "text": null}, {"id": "fact-38", "kind": "claim", "parent": "private-1", "public": false, "text": null}, {"id": "fact-39", "kind": "claim", "parent": "private-1", "public": false, "text": null}, {"id": "fact-40", "kind": "claim", "parent": "private-1", "public": false, "text": null}, {"id": "fact-41", "kind": "claim", "parent": "private-1", "public": false, "text": null}, {"id": "fact-42", "kind": "claim", "parent": "private-1", "public": false, "text": null}, {"id": "fact-43", "kind": "claim", "parent": "private-1", "public": false, "text": null}, {"id": "fact-44", "kind": "claim", "parent": "private-1", "public": false, "text": null}, {"id": "fact-45", "kind": "claim", "parent": "private-1", "public": false, "text": null}, {"id": "fact-46", "kind": "claim", "parent": "private-1", "public": false, "text": null}, {"id": "fact-47", "kind": "claim", "parent": "private-1", "public": false, "text": null}, {"id": "fact-48", "kind": "claim", "parent": "private-1", "public": false, "text": null}, {"id": "fact-49", "kind": "claim", "parent": "private-1", "public": false, "text": null}, {"id": "fact-50", "kind": "claim", "parent": "private-1", "public": false, "text": null}, {"id": "fact-51", "kind": "claim", "parent": "private-1", "public": false, "text": null}, {"id": "fact-52", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-53", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-54", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-55", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-56", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-57", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-58", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-59", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-60", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-61", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-62", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-63", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-64", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-65", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-66", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-67", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-68", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-69", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-70", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-71", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-72", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-73", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-74", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-75", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-76", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-77", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-78", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-79", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-80", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-81", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-82", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-83", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-84", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-85", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-86", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-87", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-88", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-89", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-90", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-91", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-92", "kind": "claim", "parent": "private-4", "public": false, "text": null}, {"id": "fact-93", "kind": "claim", "parent": "private-6", "public": false, "text": null}, {"id": "fact-94", "kind": "claim", "parent": "private-6", "public": false, "text": null}, {"id": "fact-95", "kind": "claim", "parent": "private-6", "public": false, "text": null}, {"id": "fact-96", "kind": "claim", "parent": "private-6", "public": false, "text": null}, {"id": "fact-97", "kind": "claim", "parent": "private-6", "public": false, "text": null}, {"id": "fact-98", "kind": "claim", "parent": "private-6", "public": false, "text": null}, {"id": "fact-99", "kind": "claim", "parent": "private-6", "public": false, "text": null}, {"id": "fact-100", "kind": "claim", "parent": "private-6", "public": false, "text": null}, {"id": "fact-101", "kind": "claim", "parent": "private-6", "public": false, "text": null}, {"id": "fact-102", "kind": "claim", "parent": "private-6", "public": false, "text": null}, {"id": "fact-103", "kind": "claim", "parent": "private-6", "public": false, "text": null}, {"id": "fact-104", "kind": "claim", "parent": "private-6", "public": false, "text": null}, {"id": "fact-105", "kind": "claim", "parent": "private-6", "public": false, "text": null}, {"id": "fact-106", "kind": "claim", "parent": "private-6", "public": false, "text": null}, {"id": "fact-107", "kind": "claim", "parent": "private-6", "public": false, "text": null}, {"id": "fact-108", "kind": "claim", "parent": "private-6", "public": false, "text": null}, {"id": "fact-109", "kind": "claim", "parent": "private-6", "public": false, "text": null}, {"id": "fact-110", "kind": "claim", "parent": "private-6", "public": false, "text": null}, {"id": "fact-111", "kind": "claim", "parent": "private-9", "public": false, "text": null}, {"id": "fact-112", "kind": "claim", "parent": "private-9", "public": false, "text": null}, {"id": "fact-113", "kind": "claim", "parent": "private-9", "public": false, "text": null}, {"id": "fact-114", "kind": "claim", "parent": "private-9", "public": false, "text": null}, {"id": "fact-115", "kind": "claim", "parent": "private-9", "public": false, "text": null}, {"id": "fact-116", "kind": "claim", "parent": "private-9", "public": false, "text": null}, {"id": "fact-117", "kind": "claim", "parent": "private-9", "public": false, "text": null}, {"id": "fact-118", "kind": "claim", "parent": "private-9", "public": false, "text": null}, {"id": "fact-119", "kind": "claim", "parent": "private-9", "public": false, "text": null}, {"id": "fact-120", "kind": "claim", "parent": "private-11", "public": false, "text": null}, {"id": "fact-121", "kind": "claim", "parent": "private-11", "public": false, "text": null}, {"id": "fact-122", "kind": "claim", "parent": "private-11", "public": false, "text": null}, {"id": "fact-123", "kind": "claim", "parent": "private-11", "public": false, "text": null}, {"id": "fact-124", "kind": "claim", "parent": "private-11", "public": false, "text": null}, {"id": "fact-125", "kind": "claim", "parent": "private-11", "public": false, "text": null}, {"id": "fact-126", "kind": "claim", "parent": "private-11", "public": false, "text": null}, {"id": "fact-127", "kind": "claim", "parent": "private-11", "public": false, "text": null}, {"id": "fact-128", "kind": "claim", "parent": "private-11", "public": false, "text": null}, {"id": "fact-129", "kind": "claim", "parent": "private-11", "public": false, "text": null}, {"id": "fact-130", "kind": "claim", "parent": "private-11", "public": false, "text": null}, {"id": "fact-131", "kind": "claim", "parent": "private-11", "public": false, "text": null}, {"id": "fact-132", "kind": "claim", "parent": "private-11", "public": false, "text": null}, {"id": "fact-133", "kind": "claim", "parent": "private-11", "public": false, "text": null}, {"id": "fact-134", "kind": "claim", "parent": "private-11", "public": false, "text": null}, {"id": "fact-135", "kind": "claim", "parent": "private-11", "public": false, "text": null}, {"id": "fact-136", "kind": "claim", "parent": "private-11", "public": false, "text": null}, {"id": "fact-137", "kind": "claim", "parent": "private-11", "public": false, "text": null}, {"id": "fact-138", "kind": "claim", "parent": "private-11", "public": false, "text": null}, {"id": "fact-139", "kind": "claim", "parent": "private-11", "public": false, "text": null}, {"id": "fact-140", "kind": "claim", "parent": "private-11", "public": false, "text": null}, {"id": "fact-141", "kind": "claim", "parent": "private-11", "public": false, "text": null}, {"id": "fact-142", "kind": "claim", "parent": "private-11", "public": false, "text": null}, {"id": "fact-143", "kind": "claim", "parent": "private-13", "public": false, "text": null}, {"id": "fact-144", "kind": "claim", "parent": "private-13", "public": false, "text": null}, {"id": "fact-145", "kind": "claim", "parent": "private-13", "public": false, "text": null}, {"id": "fact-146", "kind": "claim", "parent": "private-13", "public": false, "text": null}, {"id": "fact-147", "kind": "claim", "parent": "private-13", "public": false, "text": null}, {"id": "fact-148", "kind": "claim", "parent": "private-13", "public": false, "text": null}], "links": [{"source": "aegis-finance-history", "target": "aegis-finance-overview", "rel": "part_of"}, {"source": "aegis-finance-structure", "target": "aegis-finance-overview", "rel": "part_of"}, {"source": "aegis-quant-knowledge-structure", "target": "aegis-quant-knowledge-overview", "rel": "part_of"}, {"source": "private-2", "target": "private-1", "rel": "part_of"}, {"source": "private-5", "target": "private-4", "rel": "part_of"}, {"source": "private-7", "target": "private-6", "rel": "part_of"}, {"source": "private-10", "target": "private-9", "rel": "part_of"}, {"source": "private-12", "target": "private-11", "rel": "part_of"}, {"source": "private-14", "target": "private-13", "rel": "part_of"}, {"source": "aegis-finance-overview", "target": "fact-1", "rel": "claim"}, {"source": "aegis-finance-overview", "target": "fact-2", "rel": "claim"}, {"source": "aegis-finance-overview", "target": "fact-3", "rel": "claim"}, {"source": "aegis-finance-overview", "target": "fact-4", "rel": "claim"}, {"source": "aegis-finance-overview", "target": "fact-5", "rel": "claim"}, {"source": "aegis-finance-overview", "target": "fact-6", "rel": "claim"}, {"source": "aegis-finance-overview", "target": "fact-7", "rel": "claim"}, {"source": "aegis-finance-overview", "target": "fact-8", "rel": "claim"}, {"source": "aegis-finance-overview", "target": "fact-9", "rel": "claim"}, {"source": "aegis-finance-overview", "target": "fact-10", "rel": "claim"}, {"source": "aegis-finance-overview", "target": "fact-11", "rel": "claim"}, {"source": "aegis-finance-overview", "target": "fact-12", "rel": "claim"}, {"source": "aegis-finance-decisions", "target": "fact-13", "rel": "claim"}, {"source": "aegis-finance-decisions", "target": "fact-14", "rel": "claim"}, {"source": "aegis-finance-decisions", "target": "fact-15", "rel": "claim"}, {"source": "aegis-finance-decisions", "target": "fact-16", "rel": "claim"}, {"source": "aegis-finance-decisions", "target": "fact-17", "rel": "claim"}, {"source": "aegis-finance-decisions", "target": "fact-18", "rel": "claim"}, {"source": "aegis-finance-decisions", "target": "fact-19", "rel": "claim"}, {"source": "aegis-finance-decisions", "target": "fact-20", "rel": "claim"}, {"source": "aegis-finance-decisions", "target": "fact-21", "rel": "claim"}, {"source": "aegis-finance-decisions", "target": "fact-22", "rel": "claim"}, {"source": "aegis-finance-decisions", "target": "fact-23", "rel": "claim"}, {"source": "aegis-finance-decisions", "target": "fact-24", "rel": "claim"}, {"source": "aegis-finance-decisions", "target": "fact-25", "rel": "claim"}, {"source": "aegis-finance-overview", "target": "fact-26", "rel": "claim"}, {"source": "aegis-quant-knowledge-overview", "target": "fact-27", "rel": "claim"}, {"source": "private-1", "target": "fact-28", "rel": "claim"}, {"source": "private-1", "target": "fact-29", "rel": "claim"}, {"source": "private-1", "target": "fact-30", "rel": "claim"}, {"source": "private-1", "target": "fact-31", "rel": "claim"}, {"source": "private-1", "target": "fact-32", "rel": "claim"}, {"source": "private-1", "target": "fact-33", "rel": "claim"}, {"source": "private-1", "target": "fact-34", "rel": "claim"}, {"source": "private-1", "target": "fact-35", "rel": "claim"}, {"source": "private-1", "target": "fact-36", "rel": "claim"}, {"source": "private-1", "target": "fact-37", "rel": "claim"}, {"source": "private-1", "target": "fact-38", "rel": "claim"}, {"source": "private-1", "target": "fact-39", "rel": "claim"}, {"source": "private-1", "target": "fact-40", "rel": "claim"}, {"source": "private-1", "target": "fact-41", "rel": "claim"}, {"source": "private-1", "target": "fact-42", "rel": "claim"}, {"source": "private-1", "target": "fact-43", "rel": "claim"}, {"source": "private-1", "target": "fact-44", "rel": "claim"}, {"source": "private-1", "target": "fact-45", "rel": "claim"}, {"source": "private-1", "target": "fact-46", "rel": "claim"}, {"source": "private-1", "target": "fact-47", "rel": "claim"}, {"source": "private-1", "target": "fact-48", "rel": "claim"}, {"source": "private-1", "target": "fact-49", "rel": "claim"}, {"source": "private-1", "target": "fact-50", "rel": "claim"}, {"source": "private-1", "target": "fact-51", "rel": "claim"}, {"source": "private-4", "target": "fact-52", "rel": "claim"}, {"source": "private-4", "target": "fact-53", "rel": "claim"}, {"source": "private-4", "target": "fact-54", "rel": "claim"}, {"source": "private-4", "target": "fact-55", "rel": "claim"}, {"source": "private-4", "target": "fact-56", "rel": "claim"}, {"source": "private-4", "target": "fact-57", "rel": "claim"}, {"source": "private-4", "target": "fact-58", "rel": "claim"}, {"source": "private-4", "target": "fact-59", "rel": "claim"}, {"source": "private-4", "target": "fact-60", "rel": "claim"}, {"source": "private-4", "target": "fact-61", "rel": "claim"}, {"source": "private-4", "target": "fact-62", "rel": "claim"}, {"source": "private-4", "target": "fact-63", "rel": "claim"}, {"source": "private-4", "target": "fact-64", "rel": "claim"}, {"source": "private-4", "target": "fact-65", "rel": "claim"}, {"source": "private-4", "target": "fact-66", "rel": "claim"}, {"source": "private-4", "target": "fact-67", "rel": "claim"}, {"source": "private-4", "target": "fact-68", "rel": "claim"}, {"source": "private-4", "target": "fact-69", "rel": "claim"}, {"source": "private-4", "target": "fact-70", "rel": "claim"}, {"source": "private-4", "target": "fact-71", "rel": "claim"}, {"source": "private-4", "target": "fact-72", "rel": "claim"}, {"source": "private-4", "target": "fact-73", "rel": "claim"}, {"source": "private-4", "target": "fact-74", "rel": "claim"}, {"source": "private-4", "target": "fact-75", "rel": "claim"}, {"source": "private-4", "target": "fact-76", "rel": "claim"}, {"source": "private-4", "target": "fact-77", "rel": "claim"}, {"source": "private-4", "target": "fact-78", "rel": "claim"}, {"source": "private-4", "target": "fact-79", "rel": "claim"}, {"source": "private-4", "target": "fact-80", "rel": "claim"}, {"source": "private-4", "target": "fact-81", "rel": "claim"}, {"source": "private-4", "target": "fact-82", "rel": "claim"}, {"source": "private-4", "target": "fact-83", "rel": "claim"}, {"source": "private-4", "target": "fact-84", "rel": "claim"}, {"source": "private-4", "target": "fact-85", "rel": "claim"}, {"source": "private-4", "target": "fact-86", "rel": "claim"}, {"source": "private-4", "target": "fact-87", "rel": "claim"}, {"source": "private-4", "target": "fact-88", "rel": "claim"}, {"source": "private-4", "target": "fact-89", "rel": "claim"}, {"source": "private-4", "target": "fact-90", "rel": "claim"}, {"source": "private-4", "target": "fact-91", "rel": "claim"}, {"source": "private-4", "target": "fact-92", "rel": "claim"}, {"source": "private-6", "target": "fact-93", "rel": "claim"}, {"source": "private-6", "target": "fact-94", "rel": "claim"}, {"source": "private-6", "target": "fact-95", "rel": "claim"}, {"source": "private-6", "target": "fact-96", "rel": "claim"}, {"source": "private-6", "target": "fact-97", "rel": "claim"}, {"source": "private-6", "target": "fact-98", "rel": "claim"}, {"source": "private-6", "target": "fact-99", "rel": "claim"}, {"source": "private-6", "target": "fact-100", "rel": "claim"}, {"source": "private-6", "target": "fact-101", "rel": "claim"}, {"source": "private-6", "target": "fact-102", "rel": "claim"}, {"source": "private-6", "target": "fact-103", "rel": "claim"}, {"source": "private-6", "target": "fact-104", "rel": "claim"}, {"source": "private-6", "target": "fact-105", "rel": "claim"}, {"source": "private-6", "target": "fact-106", "rel": "claim"}, {"source": "private-6", "target": "fact-107", "rel": "claim"}, {"source": "private-6", "target": "fact-108", "rel": "claim"}, {"source": "private-6", "target": "fact-109", "rel": "claim"}, {"source": "private-6", "target": "fact-110", "rel": "claim"}, {"source": "private-9", "target": "fact-111", "rel": "claim"}, {"source": "private-9", "target": "fact-112", "rel": "claim"}, {"source": "private-9", "target": "fact-113", "rel": "claim"}, {"source": "private-9", "target": "fact-114", "rel": "claim"}, {"source": "private-9", "target": "fact-115", "rel": "claim"}, {"source": "private-9", "target": "fact-116", "rel": "claim"}, {"source": "private-9", "target": "fact-117", "rel": "claim"}, {"source": "private-9", "target": "fact-118", "rel": "claim"}, {"source": "private-9", "target": "fact-119", "rel": "claim"}, {"source": "private-11", "target": "fact-120", "rel": "claim"}, {"source": "private-11", "target": "fact-121", "rel": "claim"}, {"source": "private-11", "target": "fact-122", "rel": "claim"}, {"source": "private-11", "target": "fact-123", "rel": "claim"}, {"source": "private-11", "target": "fact-124", "rel": "claim"}, {"source": "private-11", "target": "fact-125", "rel": "claim"}, {"source": "private-11", "target": "fact-126", "rel": "claim"}, {"source": "private-11", "target": "fact-127", "rel": "claim"}, {"source": "private-11", "target": "fact-128", "rel": "claim"}, {"source": "private-11", "target": "fact-129", "rel": "claim"}, {"source": "private-11", "target": "fact-130", "rel": "claim"}, {"source": "private-11", "target": "fact-131", "rel": "claim"}, {"source": "private-11", "target": "fact-132", "rel": "claim"}, {"source": "private-11", "target": "fact-133", "rel": "claim"}, {"source": "private-11", "target": "fact-134", "rel": "claim"}, {"source": "private-11", "target": "fact-135", "rel": "claim"}, {"source": "private-11", "target": "fact-136", "rel": "claim"}, {"source": "private-11", "target": "fact-137", "rel": "claim"}, {"source": "private-11", "target": "fact-138", "rel": "claim"}, {"source": "private-11", "target": "fact-139", "rel": "claim"}, {"source": "private-11", "target": "fact-140", "rel": "claim"}, {"source": "private-11", "target": "fact-141", "rel": "claim"}, {"source": "private-11", "target": "fact-142", "rel": "claim"}, {"source": "private-13", "target": "fact-143", "rel": "claim"}, {"source": "private-13", "target": "fact-144", "rel": "claim"}, {"source": "private-13", "target": "fact-145", "rel": "claim"}, {"source": "private-13", "target": "fact-146", "rel": "claim"}, {"source": "private-13", "target": "fact-147", "rel": "claim"}, {"source": "private-13", "target": "fact-148", "rel": "claim"}]};
+const TYPE_EXPLAIN = {"overview": "What a project IS \u2014 the summary page the AI reads first when asked about it.", "structure": "The project's map \u2014 how its files and modules are organized.", "history": "The project's story over time, distilled from its git commits.", "decisions": "Key decisions and their reasoning, each backed by a cited source.", "identity": "Who the human behind the brain is. Private \u2014 never exported.", "disposition": "How the human prefers to work and communicate. Private \u2014 never exported."};
+
+const canvas = document.getElementById("brainmap");
+const panel = document.getElementById("panel");
+const ctx = canvas.getContext("2d");
+const css = (v) => getComputedStyle(document.documentElement)
+  .getPropertyValue(v).trim();
+
+function typeColor(n) {
+  if (n.kind === "claim") {
+    const parent = byId[n.parent];
+    return parent ? typeColor(parent) : css("--c-private");
+  }
+  if (!n.public) return css("--c-private");
+  if (n.type === "overview") return css("--c-overview");
+  if (n.type === "structure") return css("--c-structure");
+  if (n.type === "history") return css("--c-history");
+  if (n.type === "decisions") return css("--c-decisions");
+  return css("--c-personal");
+}
+
+// layout state
+let W = 0, H = 0, DPR = 1;
+const nodes = GRAPH.nodes.map((n, i) => ({
+  ...n,
+  r: n.kind === "claim" ? 3.5 : 10 + Math.sqrt(n.claims || 0) * 3.2,
+  x: 0, y: 0, vx: 0, vy: 0, seed: i
+}));
+const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
+const links = GRAPH.links
+  .map(l => ({ s: byId[l.source], t: byId[l.target], rel: l.rel }))
+  .filter(l => l.s && l.t);
+
+function resize() {
+  DPR = window.devicePixelRatio || 1;
+  W = canvas.clientWidth; H = 480;
+  canvas.width = W * DPR; canvas.height = H * DPR;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+resize();
+window.addEventListener("resize", resize);
+
+// deterministic initial placement: pages on a ring (public cluster left),
+// claims scattered around their parent page
+nodes.filter(n => n.kind === "page").forEach((n, i, pages) => {
+  const a = (i / pages.length) * Math.PI * 2;
+  const cx = n.public ? 0.36 : 0.66;
+  n.x = W * cx + Math.cos(a) * 90 + (i % 3) * 7;
+  n.y = H * 0.5 + Math.sin(a) * 120 + (i % 5) * 5;
+});
+nodes.filter(n => n.kind === "claim").forEach((n, i) => {
+  const p = byId[n.parent];
+  const a = (i * 2.399963) % (Math.PI * 2); // golden angle scatter
+  n.x = (p ? p.x : W / 2) + Math.cos(a) * 34;
+  n.y = (p ? p.y : H / 2) + Math.sin(a) * 34;
+});
+
+let dragging = null, hover = null, alpha = 1;
+
+function step() {
+  // forces: repulsion, springs on links, mild center gravity
+  for (let i = 0; i < nodes.length; i++) {
+    const a = nodes[i];
+    for (let j = i + 1; j < nodes.length; j++) {
+      const b = nodes[j];
+      let dx = b.x - a.x, dy = b.y - a.y;
+      let d2 = dx * dx + dy * dy || 1;
+      const min = (a.r + b.r + (a.kind === "claim" || b.kind === "claim" ? 4 : 14));
+      // tiny claim nodes repel weakly; pages keep their spacing
+      const scale = (a.kind === "claim" ? 0.18 : 1) * (b.kind === "claim" ? 0.18 : 1);
+      const f = Math.min(2600 * scale / d2, 0.9) + (d2 < min * min ? 0.5 : 0);
+      const d = Math.sqrt(d2);
+      dx /= d; dy /= d;
+      a.vx -= dx * f; a.vy -= dy * f;
+      b.vx += dx * f; b.vy += dy * f;
+    }
+    // gravity: pages toward their cluster; claims toward their parent
+    if (a.kind === "claim") {
+      const p = byId[a.parent];
+      if (p) { a.vx += (p.x - a.x) * 0.02; a.vy += (p.y - a.y) * 0.02; }
+    } else {
+      const gx = W * (a.public ? 0.36 : 0.68), gy = H * 0.5;
+      a.vx += (gx - a.x) * 0.004; a.vy += (gy - a.y) * 0.004;
+    }
+  }
+  for (const l of links) {
+    let dx = l.t.x - l.s.x, dy = l.t.y - l.s.y;
+    const d = Math.sqrt(dx * dx + dy * dy) || 1;
+    const want = l.rel === "claim" ? l.s.r + 26 : l.s.r + l.t.r + 46;
+    const f = (d - want) * 0.012;
+    dx /= d; dy /= d;
+    l.s.vx += dx * f * d * 0.02; l.s.vy += dy * f * d * 0.02;
+    l.t.vx -= dx * f * d * 0.02; l.t.vy -= dy * f * d * 0.02;
+  }
+  for (const n of nodes) {
+    if (n === dragging) { n.vx = 0; n.vy = 0; continue; }
+    n.vx *= 0.86; n.vy *= 0.86;
+    n.x += n.vx * alpha; n.y += n.vy * alpha;
+    n.x = Math.max(n.r + 4, Math.min(W - n.r - 4, n.x));
+    n.y = Math.max(n.r + 4, Math.min(H - n.r - 4, n.y));
+  }
+}
+
+function draw(now) {
+  ctx.clearRect(0, 0, W, H);
+  const ink = css("--ink"), ink3 = css("--ink-3"), surface = css("--surface");
+
+  ctx.lineWidth = 1.1;
+  for (const l of links) {
+    ctx.strokeStyle = css("--line");
+    ctx.globalAlpha = l.rel === "claim" ? 0.55 : 1;
+    ctx.beginPath(); ctx.moveTo(l.s.x, l.s.y); ctx.lineTo(l.t.x, l.t.y);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  // signal pulses traveling along the links — the "thinking" effect
+  for (let i = 0; i < links.length; i++) {
+    const l = links[i];
+    const period = l.rel === "claim" ? 4200 : 2600;
+    const phase = ((now / period) + i * 0.37) % 1;
+    const px = l.s.x + (l.t.x - l.s.x) * phase;
+    const py = l.s.y + (l.t.y - l.s.y) * phase;
+    ctx.beginPath();
+    ctx.arc(px, py, l.rel === "claim" ? 1.3 : 2.1, 0, Math.PI * 2);
+    ctx.fillStyle = typeColor(l.t);
+    ctx.globalAlpha = 0.7 * Math.sin(phase * Math.PI);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  for (const n of nodes) {
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+    ctx.fillStyle = typeColor(n);
+    ctx.globalAlpha = n.kind === "claim"
+      ? (n.public ? 0.75 : 0.35)
+      : (n.public ? 0.92 : 0.55);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    if (n.kind !== "claim") {
+      // 2px surface ring so overlapping bubbles stay separable
+      ctx.lineWidth = 2; ctx.strokeStyle = surface; ctx.stroke();
+    }
+    if (n === hover) {
+      ctx.lineWidth = 2.5; ctx.strokeStyle = ink; ctx.stroke();
+    }
+  }
+  // labels for public PAGE bubbles (text in ink, never series color)
+  ctx.font = "12px ui-sans-serif, system-ui";
+  ctx.textAlign = "center";
+  for (const n of nodes) {
+    if (!n.public || n.kind === "claim") continue;
+    const label = n.id.replace("aegis-finance-", "").replace(
+      "aegis-quant-knowledge-", "quant-");
+    ctx.fillStyle = ink;
+    ctx.fillText(label, n.x, n.y + n.r + 14);
+  }
+  ctx.fillStyle = ink3;
+  ctx.fillText("public: Aegis projects", W * 0.36, 20);
+  ctx.fillText("private (anonymized)", W * 0.68, 20);
+}
+
+function loop(now) { step(); draw(now || 0); requestAnimationFrame(loop); }
+requestAnimationFrame(loop);
+
+function nodeAt(x, y) {
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const n = nodes[i];
+    const dx = x - n.x, dy = y - n.y;
+    if (dx * dx + dy * dy <= (n.r + 4) * (n.r + 4)) return n;
+  }
+  return null;
+}
+function pos(e) {
+  const r = canvas.getBoundingClientRect();
+  const p = e.touches ? e.touches[0] : e;
+  return [p.clientX - r.left, p.clientY - r.top];
+}
+
+canvas.addEventListener("mousemove", (e) => {
+  const [x, y] = pos(e);
+  if (dragging) { dragging.x = x; dragging.y = y; return; }
+  hover = nodeAt(x, y);
+  canvas.style.cursor = hover ? "pointer" : "grab";
+});
+canvas.addEventListener("mousedown", (e) => {
+  const [x, y] = pos(e);
+  dragging = nodeAt(x, y);
+});
+window.addEventListener("mouseup", () => { dragging = null; });
+canvas.addEventListener("click", (e) => {
+  const [x, y] = pos(e);
+  const n = nodeAt(x, y);
+  if (n) showPanel(n);
+});
+canvas.addEventListener("touchstart", (e) => {
+  const [x, y] = pos(e);
+  const n = nodeAt(x, y);
+  if (n) showPanel(n);
+}, { passive: true });
+
+function esc(s) {
+  const d = document.createElement("div");
+  d.textContent = s == null ? "" : String(s);
+  return d.innerHTML;
+}
+
+function showPanel(n) {
+  if (n.kind === "claim") {
+    const parent = byId[n.parent];
+    if (n.public && n.text) {
+      panel.innerHTML =
+        "<h3>Verified fact</h3>" +
+        '<div class="meta">from ' + esc(parent ? parent.title : n.parent) + "</div>" +
+        "<p>“" + esc(n.text) + "”</p>" +
+        "<p style='font-size:13px'>Every small dot is one fact the brain " +
+        "holds, cited back to its source at ingest time.</p>";
+    } else {
+      panel.innerHTML =
+        "<h3>🔒 Private fact</h3>" +
+        "<p>A verified fact inside a private page — it exists on the map so " +
+        "the brain's density is honest, but its content never leaves the " +
+        "local machine.</p>";
+    }
+    return;
+  }
+  const explain = TYPE_EXPLAIN[n.type] || "A knowledge page.";
+  const conn = links.filter(l => l.rel !== "claim" && (l.s === n || l.t === n)).length;
+  if (n.public) {
+    panel.innerHTML =
+      "<h3>" + esc(n.title) + "</h3>" +
+      '<div class="meta">' + esc(n.project) + " · " + esc(n.type) +
+      " · " + n.claims + " verified fact" + (n.claims === 1 ? "" : "s") +
+      " · " + conn + " link" + (conn === 1 ? "" : "s") + "</div>" +
+      "<p>" + esc(explain) + "</p>" +
+      '<p><a href="#page-' + esc(n.id) + '" onclick="document.getElementById(' +
+      "'page-" + esc(n.id) + "'" + ').open = true">Read the full page below ↓</a></p>';
+  } else {
+    panel.innerHTML =
+      "<h3>🔒 Private page</h3>" +
+      '<div class="meta">' + esc(n.project || "personal") + " · " + esc(n.type) +
+      " · " + n.claims + " fact" + (n.claims === 1 ? "" : "s") + "</div>" +
+      "<p>" + esc(explain) + "</p>" +
+      "<p>Private pages exist on the map so you can see the brain's true " +
+      "shape — but their titles and contents are excluded from this export " +
+      "by construction.</p>";
+  }
+}
+</script>
+</body>
+</html>

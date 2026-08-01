@@ -1,0 +1,19 @@
+# Optimus Brain — public snapshot (English)
+# built 2026-07-11 17:21 UTC · brain @ 5e712e5
+
+This host is a read-only export of the Optimus memory layer
+behind Aegis Finance. Machine endpoints:
+
+  /brain.json      full public snapshot (stats + graph + pages + demos)
+  /pages/<id>.md   raw public knowledge pages:
+
+    /pages/aegis-finance-decisions.md  — Aegis Finance — Decisions
+    /pages/aegis-finance-history.md  — Aegis Finance — Commit History
+    /pages/aegis-finance-overview.md  — Aegis Finance — Overview
+    /pages/aegis-finance-structure.md  — Aegis Finance — Structure
+    /pages/aegis-quant-knowledge-overview.md  — KNOWLEDGE — Overview
+    /pages/aegis-quant-knowledge-structure.md  — KNOWLEDGE — Structure
+
+Private content (identity, dispositions, personal projects)
+is excluded by construction — anonymized graph nodes and
+aggregate counts only.

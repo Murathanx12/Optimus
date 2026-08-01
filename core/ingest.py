@@ -473,6 +473,135 @@ def _first_meaningful_line(text: str) -> str:
     return ""
 
 
+# --------------------------------------------------------------------------- #
+# notes channel — one page PER markdown file, full text indexed
+# --------------------------------------------------------------------------- #
+# Why this exists (2026-08-02): the git channel distills a repo into THREE
+# summary pages, and the folder channel reads only each file's first line. For
+# knowledge-dense corpora — session-memory files, trial registrations,
+# NEGATIVE_RESULTS sections — that throws away exactly the text a query needs
+# to match on (+1/term body scoring never sees it). The notes channel makes
+# each markdown file its own page with its full body indexed, so "what did we
+# conclude about X?" resolves to the note that concluded it.
+_MAX_NOTE_BYTES = 256_000
+_FM_BOUNDARY = re.compile(r"^---\s*$")
+
+
+def _split_front_matter(text: str) -> tuple[dict, str]:
+    """Return (front-matter dict, body). Tolerates absent/malformed front-matter."""
+    lines = text.splitlines()
+    if not lines or not _FM_BOUNDARY.match(lines[0]):
+        return {}, text
+    for i in range(1, min(len(lines), 60)):
+        if _FM_BOUNDARY.match(lines[i]):
+            import yaml
+            try:
+                meta = yaml.safe_load("\n".join(lines[1:i])) or {}
+            except Exception:                             # malformed YAML → body only
+                meta = {}
+            return (meta if isinstance(meta, dict) else {}), "\n".join(lines[i + 1:])
+    return {}, text
+
+
+def ingest_notes(store: Store, source: str, project: str | None = None) -> IngestResult:
+    """Ingest markdown notes: a folder of .md files, or a single .md file.
+
+    One Page per file — title from front-matter `name`/first heading/stem,
+    body = full text (front-matter stripped), one claim per file from the
+    front-matter `description`. Deterministic, idempotent (page id is derived
+    from the file stem, so re-ingest updates in place)."""
+    src = Path(source).resolve()
+    if src.is_dir():
+        root, files = src, sorted(
+            p for p in src.rglob("*.md")
+            if not p.name.startswith(".")
+            and not any(part in _IGNORE_DIRS or part.startswith(".")
+                        for part in p.relative_to(src).parts[:-1]))
+    elif src.is_file() and src.suffix.lower() == ".md":
+        root, files = src.parent, [src]
+    else:
+        raise ValueError(f"not a folder or .md file: {src}")
+    slug = project or _slugify(root.name)
+
+    pages: list[Page] = []
+    claims_total = 0
+    index_lines: list[str] = []
+    for fp in files:
+        rel = fp.relative_to(root).as_posix()
+        try:
+            if fp.stat().st_size > _MAX_NOTE_BYTES:
+                continue
+            raw = fp.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        meta, body = _split_front_matter(raw)
+        stem_slug = _slugify(fp.stem)
+        title = (str(meta.get("name") or "").strip()
+                 or next((l[2:].strip() for l in body.splitlines()
+                          if l.startswith("# ")), "")
+                 or fp.stem)
+        desc = str(meta.get("description") or "").strip()
+        mtype = ""
+        md = meta.get("metadata")
+        if isinstance(md, dict):
+            mtype = str(md.get("type") or "").strip()
+
+        page = Page(
+            id=f"{slug}-{stem_slug}",
+            title=title,
+            tier=int(Tier.PROJECTS),
+            type="note",
+            project=slug,
+            aliases=[title, fp.stem, stem_slug],
+            tags=["note"] + ([mtype] if mtype else []),
+            sources=[_fspan(slug, rel, 1)],
+            body=body.strip(),
+        )
+        page_claims: list[Claim] = []
+        if desc:
+            page_claims.append(Claim(
+                id=f"{slug}-{stem_slug}-desc", page_id=page.id, text=desc,
+                source=_fspan(slug, rel, 1), tier=int(Tier.PROJECTS)))
+        _flag_tombstoned(store, page_claims)
+        claims_total += len(page_claims)
+        page.claims = page_claims
+        page.source_root = str(root)
+        pages.append(page)
+        # Titles ONLY — no descriptions. A hub that repeats every note's summary
+        # becomes term soup that out-scores the notes themselves (+1/term body
+        # scoring); the descriptions already live on each note page.
+        index_lines.append(f"- **{title}** (`{page.id}`)")
+
+    overview = Page(
+        id=f"{slug}-overview",
+        title=f"{root.name} — Notes Index",
+        tier=int(Tier.PROJECTS),
+        # type "index": a navigation hub. query.retrieve gives an index page NO
+        # body-term score — its body is pointers to knowledge, not knowledge.
+        type="index",
+        project=slug,
+        aliases=[slug, root.name, slug.split("-")[0]],
+        tags=["project", "index", "notes"],
+        sources=[_fspan(slug, ".")],
+        body="\n".join([f"# {root.name} — Notes Index", "",
+                        f"{len(pages)} notes ingested (notes channel: full text "
+                        "of each file is its own page).", ""] + index_lines),
+    )
+    overview.source_root = str(root)
+    store.write_page(overview)
+    for page in pages:
+        store.write_page(page)
+        store.add_edge(page.id, overview.id, "part_of")
+
+    result = IngestResult(
+        project=slug, sha="", pages=[overview.id] + [p.id for p in pages],
+        claim_count=claims_total, file_count=len(files), commit_count=0)
+    store.log_event("ingest", target=slug, detail={
+        "channel": "notes", "source": str(src), "pages": len(result.pages),
+        "claims": claims_total, "files": len(files)})
+    return result
+
+
 def ingest_folder(store: Store, source: str, project: str | None = None) -> IngestResult:
     """Ingest a local folder. Tier A: structure + tool detection from names/extensions
     (no contents read). Tier B: read small text/doc files only (binaries never opened)."""

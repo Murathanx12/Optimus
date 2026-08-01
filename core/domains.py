@@ -44,6 +44,10 @@ PROJECT_DOMAIN: dict[str, str] = {
     "aegis-quant-knowledge": FINANCE,
     "aegis-module": FINANCE,
     "aegis-research": FINANCE,
+    "aegis-session-memory": FINANCE,   # distilled Claude-session record (notes channel)
+    "aegis-module-trials": FINANCE,    # frozen trial registrations + results (notes channel)
+    "aegis-research-docs": FINANCE,    # panel adjudications, briefings, prompts (notes channel)
+    "aegis-neg-results": FINANCE,      # NEGATIVE_RESULTS.md — the graveyard (notes channel)
     "market-engine-v5": FINANCE_ANCESTOR,
     "market-prediction-engine": FINANCE_ANCESTOR,
     "frc-plane-school": ROBOTICS,

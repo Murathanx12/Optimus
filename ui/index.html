@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="referrer" content="no-referrer" />
+  <title>Optimus — Brain Viewer (read-only)</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <aside id="sidebar">
+    <header>
+      <h1>Optimus <span class="ro-badge" title="This viewer never writes to the brain.">READ-ONLY</span></h1>
+      <p id="summary" class="muted">loading…</p>
+    </header>
+
+    <section class="panel">
+      <label class="lbl" for="search">Search <span class="muted">(alias-aware)</span></label>
+      <input id="search" type="search" placeholder="aegis, portfolio, murat…" autocomplete="off" />
+      <ul id="search-results"></ul>
+    </section>
+
+    <section class="panel">
+      <div class="lbl">Audit state</div>
+      <div id="audit-filter" class="chips">
+        <button class="chip active" data-state="all">All</button>
+        <button class="chip chip-drift" data-state="drifted">Only DRIFTED</button>
+        <button class="chip" data-state="verified">Verified</button>
+        <button class="chip" data-state="unverifiable-here">Unverifiable</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="lbl">Tiers</div>
+      <div id="tier-filter" class="chips">
+        <button class="chip active" data-tier="1">① Identity</button>
+        <button class="chip active" data-tier="2">② Projects</button>
+        <button class="chip active" data-tier="3">③ Dispositions</button>
+        <button class="chip active" data-tier="4">④ Ephemeral</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <label class="lbl" for="project">Project</label>
+      <select id="project"><option value="">All projects</option></select>
+    </section>
+
+    <section class="panel">
+      <button id="tombstone-btn" class="wide-btn">⚰ Tombstones (<span id="tomb-count">0</span>)</button>
+      <button id="refresh-btn" class="wide-btn ghost" title="Re-run audit against sources">↻ Re-run audit</button>
+    </section>
+
+    <section class="panel legend">
+      <div class="lbl">Legend</div>
+      <div class="legend-grid">
+        <div class="lg-head">Audit (fill)</div>
+        <div><span class="swatch" style="background:#3fb950"></span>Verified</div>
+        <div><span class="swatch" style="background:#f85149"></span>Drifted (wrong)</div>
+        <div><span class="swatch" style="background:#8b949e"></span>Unverifiable here</div>
+        <div><span class="swatch" style="background:#6e7681"></span>Skipped / none</div>
+        <div class="lg-head">Tier (shape)</div>
+        <div><svg class="lg-shape" viewBox="-12 -12 24 24"><polygon points="0,-10 2.9,-3.1 10,-3.1 4.1,1.6 6.5,9 0,4.5 -6.5,9 -4.1,1.6 -10,-3.1 -2.9,-3.1" /></svg>Identity</div>
+        <div><svg class="lg-shape" viewBox="-12 -12 24 24"><circle r="9" /></svg>Projects</div>
+        <div><svg class="lg-shape" viewBox="-12 -12 24 24"><polygon points="9,0 4.5,7.8 -4.5,7.8 -9,0 -4.5,-7.8 4.5,-7.8" /></svg>Dispositions</div>
+        <div><svg class="lg-shape" viewBox="-12 -12 24 24"><polygon points="0,-9 8,7 -8,7" /></svg>Ephemeral</div>
+      </div>
+      <div class="muted small">Dashed + dimmed = deprecated/flagged.</div>
+    </section>
+    <footer class="muted small">localhost · no network · brain opened read-only</footer>
+  </aside>
+
+  <main id="stage">
+    <svg id="graph"><g id="viewport"><g id="edges"></g><g id="nodes"></g></g></svg>
+    <div id="hint" class="muted">Drag to pan · scroll to zoom · drag a node to move · click a node for detail</div>
+  </main>
+
+  <aside id="detail" class="hidden">
+    <button id="detail-close" aria-label="close">✕</button>
+    <div id="detail-body"></div>
+  </aside>
+
+  <aside id="tombstones" class="hidden">
+    <button id="tomb-close" aria-label="close">✕</button>
+    <h2>⚰ Tombstones</h2>
+    <p class="muted small">Deprecated entities. Each blocks silent re-ingestion. Read-only view.</p>
+    <div id="tomb-body"></div>
+  </aside>
+
+  <script src="/app.js"></script>
+</body>
+</html>

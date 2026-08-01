@@ -65,11 +65,16 @@ _INTENT: dict[str, str] = {
     "tree": "structure", "architecture": "structure",
     "history": "history", "commits": "history", "commit": "history",
     "changelog": "history", "timeline": "history", "contributors": "history",
-    "overview": "overview", "about": "overview", "summary": "overview",
-    "what": "overview", "describe": "overview", "is": "overview",
+    "overview": "overview", "summary": "overview", "describe": "overview",
 }
-# Tokens too common to carry retrieval signal.
-_STOP = {"the", "a", "an", "of", "to", "for", "and", "in", "on", "me", "tell", "show"}
+# Tokens too common to carry retrieval signal. "what"/"is"/"why" were once
+# overview-INTENT, which made every natural-language question hand +50 to
+# overview pages — tolerable when the corpus was only summary pages, corpus-
+# distorting once the notes channel added real content pages (2026-08-02).
+# A named project still defaults to its overview via the `projects` path.
+_STOP = {"the", "a", "an", "of", "to", "for", "and", "in", "on", "me", "tell",
+         "show", "what", "is", "why", "was", "how", "did", "does", "do",
+         "about"}
 
 # Weight of "did this page match the whole query", added on top of raw term hits.
 COVERAGE_BONUS = 30.0
@@ -290,13 +295,6 @@ def retrieve(
     scored: list[RetrievedPage] = []
     for r in candidates:
         score = 0.0
-        if wanted_types:
-            if r["type"] in wanted_types:
-                score += 50
-        elif r["type"] == "overview" and projects:
-            # No explicit intent but a project was named → default to its overview.
-            # Gated on `projects` so unrelated queries don't false-match an overview.
-            score += 30
         if r["project"] in projects:
             score += 20
         if r["id"] in named:
@@ -306,7 +304,11 @@ def retrieve(
         claims = store.claims_for(r["id"], status="active")  # deprecated claims have weight 0
         claim_terms = set(_tokens(" ".join(c.text for c in claims)))
         page = store.read_page(r["id"])
-        body_terms = _body_tokens(page.body) if page else set()
+        # Index pages (notes-channel hubs) are navigation: their body is a list
+        # of other pages' titles, which is pure term soup. They stay findable by
+        # alias/title/intent but never win on body content they merely point at.
+        body_terms = (_body_tokens(page.body)
+                      if page and r["type"] != "index" else set())
 
         matched: set[str] = set()
         for term in content_terms:
@@ -322,6 +324,18 @@ def retrieve(
 
         coverage = (len(matched) / len(content_terms)) if content_terms else 0.0
         score += COVERAGE_BONUS * coverage
+
+        # Intent selects AMONG relevant pages; it never creates relevance.
+        # Before this gate (2026-08-02), "about ..." handed +50 to EVERY
+        # overview in the corpus — a robotics overview scored 50, above the
+        # abstention floor, on a finance query it matched zero terms of.
+        anchored = bool(matched) or r["project"] in projects or r["id"] in named
+        if wanted_types:
+            if r["type"] in wanted_types and anchored:
+                score += 50
+        elif r["type"] == "overview" and r["project"] in projects:
+            # No explicit intent but a project was named → default to its overview.
+            score += 30
 
         if score <= 0:
             continue

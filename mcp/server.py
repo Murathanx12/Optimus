@@ -46,11 +46,14 @@ AEGIS_API = os.getenv(
 server = FastMCP(
     "optimus",
     instructions=(
-        "Optimus: Murat's personal context layer. Read-only tools for Aegis "
-        "Finance verified state (live deploy), the experiment registry, "
-        "guardrails/canon, session postmortems, and the Optimus brain corpus. "
-        "Use aegis_verified_state + aegis_canon + aegis_postmortems at session "
-        "start instead of re-reading files."
+        "Optimus: Murat's personal context layer and central brain for the "
+        "Aegis program. Read-only tools for Aegis Finance verified state "
+        "(live deploy), the experiment registry, guardrails/canon, session "
+        "postmortems, discipline skills, and the Optimus brain corpus. "
+        "START every Aegis session with session_briefing() (health + working "
+        "rules) + aegis_verified_state() (live deploy). Before proposing "
+        "research: brain_query + aegis_postmortems — the idea may already "
+        "have a corpse with receipts."
     ),
 )
 
@@ -146,6 +149,67 @@ def aegis_postmortems(query: str = "", limit: int = 3) -> str:
         out.append(f"## {f.name}\n\n"
                    + f.read_text(encoding="utf-8", errors="replace"))
     return "\n\n---\n\n".join(out)
+
+
+@server.tool()
+def session_briefing() -> str:
+    """START HERE at the top of any Aegis session. One call returns: the
+    auto-generated program health page (git state of both repos, pending
+    attended decisions, STATUS headline, session-memory current state) plus
+    the standing working rules. Static context — pair it with
+    aegis_verified_state for the LIVE deploy picture. Regenerate the health
+    page with `python tools/refresh_aegis.py` after a work session."""
+    health = _OPTIMUS_ROOT / "brain/projects/aegis-health/aegis-health-latest.md"
+    body = (health.read_text(encoding="utf-8", errors="replace")
+            if health.exists()
+            else "(health page not yet generated — run tools/refresh_aegis.py)")
+    rules = (
+        "## Standing working rules (the short canon)\n"
+        "- No skill claims before 24 months of forward record.\n"
+        "- Pre-register or it didn't happen; every examination leaves a "
+        "ledger entry.\n"
+        "- The LLM narrates; the engine computes. No LLM allocation.\n"
+        "- Backtests on our data are direction checks, never alpha claims.\n"
+        "- Silent fragility is the house failure mode: fail loud, verify "
+        "prod live after deploys.\n"
+        "- Closed families stay closed (NEGATIVE_RESULTS.md); check the "
+        "ledger before proposing an idea.\n"
+        "- Gates must be calibrated before their kills are trusted "
+        "(NEGATIVE_RESULTS #34).\n"
+        "- Research/heavy work on Opus; hard phase stops; push back on "
+        "scope creep."
+    )
+    return body + "\n\n" + rules
+
+
+@server.tool()
+def aegis_skills(name: str = "") -> str:
+    """The project's discipline skills (house procedures), served over MCP so
+    web/remote sessions get them too. Empty name -> list all skills with
+    their trigger lines; a skill name -> that skill's full SKILL.md.
+    Available: verify-prod-after-deploy, lane-integrity-check, seed-a-lane,
+    pre-register-trial, silent-fragility-audit."""
+    skills_dir = AEGIS_REPO / ".claude" / "skills"
+    if not skills_dir.exists():
+        return f"no skills dir at {skills_dir}"
+    if name:
+        p = skills_dir / name / "SKILL.md"
+        if not p.exists():
+            return (f"unknown skill '{name}'; available: "
+                    + ", ".join(sorted(d.name for d in skills_dir.iterdir()
+                                       if d.is_dir())))
+        return p.read_text(encoding="utf-8", errors="replace")
+    out = []
+    for d in sorted(skills_dir.iterdir()):
+        f = d / "SKILL.md"
+        if not (d.is_dir() and f.exists()):
+            continue
+        head = f.read_text(encoding="utf-8", errors="replace")
+        desc = re.search(r"^description:\s*(.+)$", head, re.M)
+        out.append(f"- **{d.name}** — "
+                   + (desc.group(1).strip() if desc else "(no description)"))
+    return ("Aegis discipline skills (call aegis_skills(name) for full "
+            "text):\n" + "\n".join(out))
 
 
 @server.tool()

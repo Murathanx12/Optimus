@@ -28,13 +28,22 @@ SOURCES: list[tuple[str, str, str | None]] = [
     ("notes", str(HOME / ".claude/projects/C--Users-mrthn-aegis-finance/memory"),
               "aegis-session-memory"),
     ("notes", str(HOME / "Aegis module/TRIALS"), "aegis-module-trials"),
+    ("notes", str(HOME / "Aegis module/docs"), "aegis-module-docs"),
     ("notes", str(HOME / "aegis-finance/docs/research"), "aegis-research-docs"),
     ("notes", str(HOME / "aegis-finance/NEGATIVE_RESULTS.md"), "aegis-neg-results"),
+    ("notes", str(ROOT / "brain/projects/aegis-health"), "aegis-health"),
 ]
 
 
 def main() -> int:
     failures = 0
+    # regenerate the health page BEFORE ingest so the notes channel picks it up
+    from tools.health_snapshot import main as snapshot_main  # noqa: E402
+    try:
+        snapshot_main()
+    except Exception as e:  # noqa: BLE001
+        failures += 1
+        print(f"[FAIL] health snapshot -> {type(e).__name__}: {e}")
     with Store(str(ROOT)) as store:
         for channel, source, project in SOURCES:
             try:

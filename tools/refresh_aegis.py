@@ -31,7 +31,20 @@ SOURCES: list[tuple[str, str, str | None]] = [
     ("notes", str(HOME / "Aegis module/docs"), "aegis-module-docs"),
     ("notes", str(HOME / "aegis-finance/docs/research"), "aegis-research-docs"),
     ("notes", str(HOME / "aegis-finance/NEGATIVE_RESULTS.md"), "aegis-neg-results"),
-    ("notes", str(ROOT / "brain/projects/aegis-health"), "aegis-health"),
+    # REMOVED 2026-08-15 — this line ingested the brain into itself.
+    #
+    # `ingest_notes` writes each page to `page_dir/{slug}-{stem}.md`, and for
+    # this source the page dir IS the source dir. So every run read
+    # `aegis-health-latest.md` and wrote `aegis-health-aegis-health-latest.md`,
+    # which the next run read and re-prefixed again — 12 characters per session,
+    # 35 files accumulated, and finally a filename with the slug repeated
+    # NINETEEN times that Windows refused to create. That is what
+    # `refresh FINISHED WITH 1 FAILURES` had been reporting.
+    #
+    # Nothing is lost by removing it: `brain/projects/aegis-health/` is already
+    # the brain's own page directory, so `health_snapshot` writing there IS the
+    # page being in the corpus. Ingesting it was always a no-op with a
+    # side effect.
 ]
 
 

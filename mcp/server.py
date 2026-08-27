@@ -39,6 +39,22 @@ from core.query import format_answer, retrieve  # noqa: E402
 from core.store import Store  # noqa: E402
 
 AEGIS_REPO = Path(os.getenv("AEGIS_REPO", r"C:\Users\mrthn\aegis-finance"))
+#: The competition/trading checkout. A SEPARATE repo with its own skills, its own
+#: credential namespace and its own execution surface -- so a session that knew
+#: only about AEGIS_REPO could not see the paper-trading disciplines at all.
+ALPHA_TERMINAL_REPO = Path(os.getenv(
+    "ALPHA_TERMINAL_REPO", r"C:\Users\mrthn\aegis-alpha-terminal"))
+#: User-level skills, available in every project regardless of cwd.
+USER_SKILLS = Path(os.getenv("CLAUDE_CONFIG_DIR", str(Path.home() / ".claude"))) / "skills"
+
+#: Where skills live, in PRECEDENCE order. A bare name resolves to the first
+#: root that has it, and `aegis_skills` says which root answered rather than
+#: leaving the caller to guess between two files with the same name.
+SKILL_ROOTS: tuple[tuple[str, Path], ...] = (
+    ("aegis", AEGIS_REPO / ".claude" / "skills"),
+    ("terminal", ALPHA_TERMINAL_REPO / ".claude" / "skills"),
+    ("user", USER_SKILLS),
+)
 AEGIS_API = os.getenv(
     "AEGIS_API_BASE", "https://aegis-finance-production.up.railway.app"
 ).rstrip("/")
@@ -184,32 +200,71 @@ def session_briefing() -> str:
 
 @server.tool()
 def aegis_skills(name: str = "") -> str:
-    """The project's discipline skills (house procedures), served over MCP so
-    web/remote sessions get them too. Empty name -> list all skills with
-    their trigger lines; a skill name -> that skill's full SKILL.md.
-    Available: verify-prod-after-deploy, lane-integrity-check, seed-a-lane,
-    pre-register-trial, silent-fragility-audit."""
-    skills_dir = AEGIS_REPO / ".claude" / "skills"
-    if not skills_dir.exists():
-        return f"no skills dir at {skills_dir}"
+    """Discipline skills across every checkout, served over MCP so web/remote
+    sessions get them too.
+
+    Empty `name` lists every skill found, grouped by root, with its description.
+    A `name` returns that skill's full SKILL.md. Use `root:name` (e.g.
+    `terminal:alpaca-paper-trading`) to disambiguate when two roots define the
+    same name; a bare name resolves in precedence order and SAYS which root
+    answered.
+
+    Skill names are deliberately NOT enumerated here. This docstring used to
+    list five, which meant it went stale the moment a sixth was added and a
+    reader could not tell a missing skill from an out-of-date docstring. Roots
+    that do not exist are REPORTED rather than skipped, for the same reason: an
+    empty list because a path is wrong looks exactly like an empty list because
+    there is nothing there.
+    """
+    def _entries(root: Path) -> list[tuple[str, Path]]:
+        if not root.exists():
+            return []
+        return [(d.name, d / "SKILL.md") for d in sorted(root.iterdir())
+                if d.is_dir() and (d / "SKILL.md").exists()]
+
+    index = {label: _entries(root) for label, root in SKILL_ROOTS}
+    missing = [f"{label} ({root})" for label, root in SKILL_ROOTS if not root.exists()]
+
     if name:
-        p = skills_dir / name / "SKILL.md"
-        if not p.exists():
-            return (f"unknown skill '{name}'; available: "
-                    + ", ".join(sorted(d.name for d in skills_dir.iterdir()
-                                       if d.is_dir())))
-        return p.read_text(encoding="utf-8", errors="replace")
+        want_root, _, want = name.partition(":")
+        if not want:
+            want, want_root = want_root, ""
+        for label, entries in index.items():
+            if want_root and label != want_root:
+                continue
+            for skill_name, f in entries:
+                if skill_name == want:
+                    return (f"# {skill_name}  [root: {label}]\n\n"
+                            + f.read_text(encoding="utf-8", errors="replace"))
+        available = sorted(f"{lbl}:{n}" for lbl, es in index.items() for n, _ in es)
+        note = f"  (roots not present: {'; '.join(missing)})" if missing else ""
+        return f"unknown skill {name!r}; available: " + ", ".join(available) + note
+
     out = []
-    for d in sorted(skills_dir.iterdir()):
-        f = d / "SKILL.md"
-        if not (d.is_dir() and f.exists()):
+    for label, root in SKILL_ROOTS:
+        entries = index[label]
+        if not root.exists():
+            out.append(f"\n## {label} — ROOT NOT PRESENT at {root}")
             continue
-        head = f.read_text(encoding="utf-8", errors="replace")
-        desc = re.search(r"^description:\s*(.+)$", head, re.M)
-        out.append(f"- **{d.name}** — "
-                   + (desc.group(1).strip() if desc else "(no description)"))
-    return ("Aegis discipline skills (call aegis_skills(name) for full "
-            "text):\n" + "\n".join(out))
+        out.append(f"\n## {label} ({len(entries)}) — {root}")
+        if not entries:
+            out.append("  (root exists but holds no SKILL.md)")
+        for skill_name, f in entries:
+            head = f.read_text(encoding="utf-8", errors="replace")[:4000]
+            desc = re.search(r"^description:\s*(.+(?:\n\s{2,}.+)*)$", head, re.M)
+            text = " ".join(desc.group(1).split()) if desc else "(no description)"
+            out.append(f"- **{skill_name}** — {text[:220]}")
+
+    seen: dict[str, list[str]] = {}
+    for label, entries in index.items():
+        for n, _ in entries:
+            seen.setdefault(n, []).append(label)
+    clash = {n: ls for n, ls in seen.items() if len(ls) > 1}
+    if clash:
+        out.append("\nNAME CLASHES (use root:name): "
+                   + ", ".join(f"{n} in {'/'.join(ls)}" for n, ls in clash.items()))
+    return ("Discipline skills (call aegis_skills(name) or aegis_skills('root:name') "
+            "for full text):" + "\n".join(out) + "\n")
 
 
 @server.tool()

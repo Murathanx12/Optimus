@@ -30,6 +30,12 @@ SOURCES: list[tuple[str, str, str | None]] = [
     ("notes", str(HOME / "Aegis module/TRIALS"), "aegis-module-trials"),
     ("notes", str(HOME / "Aegis module/docs"), "aegis-module-docs"),
     ("notes", str(HOME / "aegis-finance/docs/research"), "aegis-research-docs"),
+    # 2026-08-29: the main docs/ tree (INDEX, VISION, INVARIANTS, every
+    # FINDING_/ROADMAP_) was never ingested -- brain_query for "portfolio farm
+    # breadth" returned a Next.js README because the farm findings were not
+    # in the brain at all. TIER 0/1/2 live here.
+    ("notes", str(HOME / "aegis-finance/docs"), "aegis-docs"),
+    ("notes", str(HOME / "aegis-alpha-terminal/docs"), "aat-docs"),
     ("notes", str(HOME / "aegis-finance/NEGATIVE_RESULTS.md"), "aegis-neg-results"),
     # REMOVED 2026-08-15 — this line ingested the brain into itself.
     #

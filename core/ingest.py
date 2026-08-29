@@ -503,13 +503,41 @@ def _split_front_matter(text: str) -> tuple[dict, str]:
     return {}, text
 
 
+def _is_brain_output(store: Store, path: Path) -> bool:
+    """True when ``path`` lives under the brain's own page tree (``brain/``).
+
+    Ingesting the brain's output as input is the self-ingest loop measured on
+    2026-08-15 and again 2026-08-29: each pass read ``<slug>-latest.md`` from
+    ``brain/projects/<slug>/`` and wrote ``<slug>-<slug>-latest.md`` beside it,
+    eighteen deep, until the index held 33 rows whose files never existed."""
+    try:
+        path.resolve().relative_to(store.brain.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def _note_page_id(slug: str, stem_slug: str) -> str:
+    """``{slug}-{stem}`` — but never ``{slug}-{slug}-{stem}``.
+
+    A file already named with the project prefix (a page the brain wrote
+    itself, or a note deliberately named that way) keeps its id on every
+    re-ingest instead of growing one prefix per pass."""
+    if stem_slug == slug or stem_slug.startswith(f"{slug}-"):
+        return stem_slug
+    return f"{slug}-{stem_slug}"
+
+
 def ingest_notes(store: Store, source: str, project: str | None = None) -> IngestResult:
     """Ingest markdown notes: a folder of .md files, or a single .md file.
 
     One Page per file — title from front-matter `name`/first heading/stem,
     body = full text (front-matter stripped), one claim per file from the
     front-matter `description`. Deterministic, idempotent (page id is derived
-    from the file stem, so re-ingest updates in place)."""
+    from the file stem, so re-ingest updates in place).
+
+    Files under the brain's own page tree (``store.brain``) are SKIPPED: the
+    brain's output is never its input (see ``_is_brain_output``)."""
     src = Path(source).resolve()
     if src.is_dir():
         root, files = src, sorted(
@@ -526,7 +554,11 @@ def ingest_notes(store: Store, source: str, project: str | None = None) -> Inges
     pages: list[Page] = []
     claims_total = 0
     index_lines: list[str] = []
+    skipped_output = 0
     for fp in files:
+        if _is_brain_output(store, fp):        # the brain's output is never its input
+            skipped_output += 1
+            continue
         rel = fp.relative_to(root).as_posix()
         try:
             if fp.stat().st_size > _MAX_NOTE_BYTES:
@@ -547,7 +579,7 @@ def ingest_notes(store: Store, source: str, project: str | None = None) -> Inges
             mtype = str(md.get("type") or "").strip()
 
         page = Page(
-            id=f"{slug}-{stem_slug}",
+            id=_note_page_id(slug, stem_slug),
             title=title,
             tier=int(Tier.PROJECTS),
             type="note",
@@ -560,7 +592,7 @@ def ingest_notes(store: Store, source: str, project: str | None = None) -> Inges
         page_claims: list[Claim] = []
         if desc:
             page_claims.append(Claim(
-                id=f"{slug}-{stem_slug}-desc", page_id=page.id, text=desc,
+                id=f"{page.id}-desc", page_id=page.id, text=desc,
                 source=_fspan(slug, rel, 1), tier=int(Tier.PROJECTS)))
         _flag_tombstoned(store, page_claims)
         claims_total += len(page_claims)
@@ -598,7 +630,8 @@ def ingest_notes(store: Store, source: str, project: str | None = None) -> Inges
         claim_count=claims_total, file_count=len(files), commit_count=0)
     store.log_event("ingest", target=slug, detail={
         "channel": "notes", "source": str(src), "pages": len(result.pages),
-        "claims": claims_total, "files": len(files)})
+        "claims": claims_total, "files": len(files),
+        "skipped_brain_output": skipped_output})
     return result
 
 

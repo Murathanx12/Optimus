@@ -48,6 +48,15 @@ PROJECT_DOMAIN: dict[str, str] = {
     "aegis-module-trials": FINANCE,    # frozen trial registrations + results (notes channel)
     "aegis-research-docs": FINANCE,    # panel adjudications, briefings, prompts (notes channel)
     "aegis-neg-results": FINANCE,      # NEGATIVE_RESULTS.md — the graveyard (notes channel)
+    # Added 2026-09-04 (Fable 5.1 review): these four slugs held 600 of 1,015
+    # pages (59% of the corpus) and were UNSCOPED, so on a domain="finance"
+    # query no page in aegis-docs could ever out-rank an in-domain page.
+    # tests/test_domains_registry.py fails if a refresh_aegis source is
+    # ever added without a row here.
+    "aegis-docs": FINANCE,             # aegis-finance/docs (notes channel)
+    "aat-docs": FINANCE,               # aegis-alpha-terminal/docs (notes channel)
+    "aegis-module-docs": FINANCE,      # Aegis module/docs (notes channel)
+    "aegis-health": FINANCE,           # auto-generated health page
     "market-engine-v5": FINANCE_ANCESTOR,
     "market-prediction-engine": FINANCE_ANCESTOR,
     "frc-plane-school": ROBOTICS,

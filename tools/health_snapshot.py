@@ -50,10 +50,29 @@ def _head(path: Path, n: int) -> str:
                                     errors="replace").splitlines()[:n])
 
 
-def _memory_current_state() -> str:
-    text = _head(MEMORY_MD, 200)
-    m = re.search(r"## Current state.*?(?=\n## )", text, re.S)
-    return m.group(0).strip() if m else "(no Current state block found)"
+# Headings tried in order. `## Current state` never existed in MEMORY.md —
+# the block sessions actually maintain is `## START HERE` — so from the day
+# this page was born until 2026-09-04 it reported "(no Current state block
+# found)", a prose string that read like a legitimate finding.
+MEMORY_STATE_HEADINGS = ("## START HERE", "## Current state")
+_MEMORY_STATE_MAX_CHARS = 6000
+
+
+def _memory_current_state(text: str | None = None) -> str:
+    if text is None:
+        if not MEMORY_MD.exists():
+            return f"(MISSING: {MEMORY_MD} — session memory index not found)"
+        text = MEMORY_MD.read_text(encoding="utf-8", errors="replace")
+    for heading in MEMORY_STATE_HEADINGS:
+        m = re.search(re.escape(heading) + r".*?(?=\n## |\Z)", text, re.S)
+        if m:
+            block = m.group(0).strip()
+            if len(block) > _MEMORY_STATE_MAX_CHARS:
+                block = block[:_MEMORY_STATE_MAX_CHARS] + "\n... (truncated)"
+            return block
+    return ("(NO STATE BLOCK FOUND — expected one of "
+            f"{', '.join(MEMORY_STATE_HEADINGS)} in {MEMORY_MD.name}; "
+            "this is a defect in the memory index, not an empty state)")
 
 
 def _pending(status_text: str) -> str:

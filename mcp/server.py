@@ -26,6 +26,7 @@ from __future__ import annotations
 import json
 import os
 import re
+from datetime import datetime, timezone
 import sys
 import urllib.request
 from pathlib import Path
@@ -80,15 +81,52 @@ def _http_json(url: str, timeout: int = 45) -> dict:
         return json.loads(resp.read().decode("utf-8"))
 
 
+# Keys of /api/health/full that fit in a tool result. On 2026-09-04 the full
+# payload was 47-53 KB (74% of it recent_warnings + fred_health +
+# forecast_populations) and exceeded the client's tool-output limit, which
+# made the session-start protocol's first call unreadable. The default is
+# the summary; the heavy keys are fetched by name.
+_VERIFIED_STATE_SECTIONS: dict[str, tuple[str, ...]] = {
+    "summary": ("status", "degraded_reasons", "deploy", "scheduler", "nav",
+                "track_record", "llm", "data_sources"),
+    "warnings": ("recent_warnings",),
+    "fred": ("fred_health",),
+    "populations": ("forecast_populations",),
+}
+
+
+def _select_verified_state(payload: dict, section: str) -> dict:
+    """Pure selector so it can be tested without the network."""
+    if section == "all":
+        return payload
+    keys = _VERIFIED_STATE_SECTIONS.get(section)
+    if keys is None:
+        return {"error": f"unknown section {section!r}",
+                "sections": sorted(_VERIFIED_STATE_SECTIONS) + ["all"],
+                "available_keys": sorted(payload)}
+    out = {k: payload[k] for k in keys if k in payload}
+    out["_section"] = section
+    out["_omitted_keys"] = sorted(k for k in payload if k not in keys)
+    return out
+
+
 @server.tool()
-def aegis_verified_state() -> str:
-    """Live verified state of the Aegis deploy in ONE call: deploy commit +
-    uptime, scheduler + per-lane NAV freshness (nav.all_fresh), track record
-    (per-lane NAV + since-inception %), data-source health (yfinance rate,
-    FRED series by name), and the last <=50 WARNING+ log records. This is
-    what /go Phase 0 consumes — freshness, not liveness: if nav.all_fresh
-    is false, that is the session's P0."""
-    return json.dumps(_http_json(f"{AEGIS_API}/api/health/full"), indent=1)
+def aegis_verified_state(section: str = "summary") -> str:
+    """Live verified state of the Aegis deploy: deploy commit + uptime,
+    scheduler + per-lane NAV freshness (nav.all_fresh), track record
+    (per-lane NAV + since-inception %), data-source health, and the last
+    <=50 WARNING+ log records. This is what /go Phase 0 consumes —
+    freshness, not liveness: if nav.all_fresh is false, that is the
+    session's P0.
+
+    section: 'summary' (default, ~5 KB: status/degraded/deploy/scheduler/
+    nav/track_record/llm/data_sources), 'warnings' (recent_warnings),
+    'fred' (fred_health by series), 'populations' (forecast_populations),
+    or 'all' (the whole ~50 KB payload). The summary lists the keys it
+    omitted so nothing is silently hidden."""
+    payload = _http_json(f"{AEGIS_API}/api/health/full")
+    return json.dumps(_select_verified_state(payload, section),
+                      separators=(",", ":"))
 
 
 @server.tool()
@@ -167,6 +205,36 @@ def aegis_postmortems(query: str = "", limit: int = 3) -> str:
     return "\n\n---\n\n".join(out)
 
 
+_STALE_AFTER_HOURS = 12.0
+
+
+def _health_page_age_hours(body: str, now: datetime | None = None) -> float | None:
+    """Age of the health page from its own `generated YYYY-MM-DD HH:MM UTC`
+    line; None when the stamp is absent (reported as unknown, never as fresh)."""
+    m = re.search(r"generated (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) UTC", body)
+    if not m:
+        return None
+    stamp = datetime.strptime(m.group(1), "%Y-%m-%d %H:%M").replace(tzinfo=timezone.utc)
+    now = now or datetime.now(timezone.utc)
+    return (now - stamp).total_seconds() / 3600.0
+
+
+def _staleness_banner(body: str, now: datetime | None = None) -> str:
+    """A month-old snapshot must not read like a fresh one. Before 2026-09-04
+    session_briefing served whatever file was on disk with no age check;
+    refresh_aegis.py is run by hand and was 30 h behind that morning."""
+    age = _health_page_age_hours(body, now)
+    if age is None:
+        return ("> WARNING: health page carries no `generated` stamp — age "
+                "unknown; run `python tools/refresh_aegis.py`.\n\n")
+    if age > _STALE_AFTER_HOURS:
+        return (f"> WARNING: STALE health page — generated {age:.1f} h ago "
+                f"(> {_STALE_AFTER_HOURS:.0f} h). Git state, decisions and "
+                "session memory below may be out of date; run "
+                "`python tools/refresh_aegis.py` and call this tool again.\n\n")
+    return ""
+
+
 @server.tool()
 def session_briefing() -> str:
     """START HERE at the top of any Aegis session. One call returns: the
@@ -179,6 +247,7 @@ def session_briefing() -> str:
     body = (health.read_text(encoding="utf-8", errors="replace")
             if health.exists()
             else "(health page not yet generated — run tools/refresh_aegis.py)")
+    body = _staleness_banner(body) + body
     rules = (
         "## Standing working rules (the short canon)\n"
         "- No skill claims before 24 months of forward record.\n"

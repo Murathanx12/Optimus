@@ -47,14 +47,21 @@ ALPHA_TERMINAL_REPO = Path(os.getenv(
     "ALPHA_TERMINAL_REPO", r"C:\Users\mrthn\aegis-alpha-terminal"))
 #: User-level skills, available in every project regardless of cwd.
 USER_SKILLS = Path(os.getenv("CLAUDE_CONFIG_DIR", str(Path.home() / ".claude"))) / "skills"
+#: Optimus's OWN skills: cross-project ones that belong to no single checkout
+#: (the visual language chosen on 2026-10-07 was the first, and had nowhere to
+#: live: every other root is another repo's or one machine's). Committed here,
+#: so they travel with the brain instead of with one laptop's ~/.claude.
+OPTIMUS_SKILLS = _OPTIMUS_ROOT / ".claude" / "skills"
 
 #: Where skills live, in PRECEDENCE order. A bare name resolves to the first
 #: root that has it, and `aegis_skills` says which root answered rather than
-#: leaving the caller to guess between two files with the same name.
+#: leaving the caller to guess between two files with the same name. Optimus's
+#: generic skills come LAST, so a project's own skill of the same name wins.
 SKILL_ROOTS: tuple[tuple[str, Path], ...] = (
     ("aegis", AEGIS_REPO / ".claude" / "skills"),
     ("terminal", ALPHA_TERMINAL_REPO / ".claude" / "skills"),
     ("user", USER_SKILLS),
+    ("optimus", OPTIMUS_SKILLS),
 )
 AEGIS_API = os.getenv(
     "AEGIS_API_BASE", "https://aegis-finance-production.up.railway.app"

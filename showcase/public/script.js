@@ -7,11 +7,13 @@
   const detail = document.getElementById('detail');
   const motion = document.getElementById('motion');
   const trace = document.getElementById('trace');
+  const traceNext = document.getElementById('trace-next');
   const search = document.getElementById('search');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const defaultDetail = detail.innerHTML;
+  const initial = new Map(data.nodes.map(n => [n.id,{x:n.x,y:n.y}]));
   let paused = false, selected = null, tracing = false, routeStep = 0, routeClock = 0;
-  let zoom = 1, panX = 0, panY = 0, drag = null;
+  let zoom = 1, panX = 0, panY = 0, drag = null, suppressClick = false;
   const make = (tag, text, cls) => { const el = document.createElement(tag); el.textContent = text; if(cls) el.className = cls; return el; };
   function select(id) {
     selected = id;
@@ -42,17 +44,54 @@
     document.getElementById('search-status').textContent=q ? matches.size+' matching modules. Select a highlighted neuron or open the module directory.' : '';
   }
   function transform() { network.setAttribute('transform',`translate(${600+panX} ${440+panY}) scale(${zoom}) translate(-600 -440)`); }
+  function edgePath(s,t) {
+    const dx=t.x-s.x,dy=t.y-s.y;
+    let best;
+    for(const bend of [.12,-.12,.28,-.28,.46,-.46,.7,-.7]) {
+      const cx=(s.x+t.x)/2-dy*bend,cy=(s.y+t.y)/2+dx*bend;
+      const endpoint=n=>{const vx=cx-n.x,vy=cy-n.y,scale=((n.ring?12:25)+9)/Math.max(1,Math.hypot(vx,vy));return{x:n.x+vx*scale,y:n.y+vy*scale};};
+      const start=endpoint(s),end=endpoint(t);let penalty=Math.abs(bend)*.01;
+      for(let k=1;k<40;k++) {const f=k/40,x=(1-f)**2*start.x+2*(1-f)*f*cx+f*f*end.x,y=(1-f)**2*start.y+2*(1-f)*f*cy+f*f*end.y;
+        data.nodes.forEach(n=>{if(n.id!==s.id&&n.id!==t.id)penalty+=Math.max(0,(n.ring?12:25)+20-Math.hypot(x-n.x,y-n.y))**2;});
+      }
+      if(!best||penalty<best.penalty)best={penalty,start,end,cx,cy};
+    }
+    const b=best;return `M${b.start.x.toFixed(2)},${b.start.y.toFixed(2)}Q${b.cx.toFixed(2)},${b.cy.toFixed(2)} ${b.end.x.toFixed(2)},${b.end.y.toFixed(2)}`;
+  }
+  function redrawNodes() {
+    svg.querySelectorAll('[data-node]').forEach(el=>{const n=byId.get(el.dataset.node),start=initial.get(n.id);el.setAttribute('transform',`translate(${n.x-start.x} ${n.y-start.y})`);});
+    svg.querySelectorAll('.edge,.flow').forEach(el=>el.setAttribute('d',edgePath(byId.get(el.dataset.source),byId.get(el.dataset.target))));
+  }
+  function localPoint(event) { const p=new DOMPoint(event.clientX,event.clientY);return p.matrixTransform(network.getScreenCTM().inverse()); }
   const changeZoom = multiplier => { zoom=Math.max(.7,Math.min(2.4,zoom*multiplier));transform(); };
   document.getElementById('zoom-in').addEventListener('click',()=>changeZoom(1.2));
   document.getElementById('zoom-out').addEventListener('click',()=>changeZoom(1/1.2));
-  document.getElementById('reset').addEventListener('click',()=>{zoom=1;panX=panY=0;transform();search.value='';searchModules();select(null);});
+  document.getElementById('reset').addEventListener('click',()=>{zoom=1;panX=panY=0;data.nodes.forEach(n=>Object.assign(n,initial.get(n.id)));redrawNodes();transform();search.value='';searchModules();select(null);});
   svg.addEventListener('pointerdown',event=>{
-    if(event.target.closest('[data-node]')||event.button!==0||event.pointerType==='touch')return;
-    drag={x:event.clientX,y:event.clientY,px:panX,py:panY};svg.setPointerCapture(event.pointerId);svg.style.cursor='grabbing';
+    if(event.button!==0)return;
+    const node=event.target.closest('[data-node]'),point=localPoint(event);
+    drag={id:node?.dataset.node,x:event.clientX,y:event.clientY,point,px:panX,py:panY,moved:false};
+    if(drag.id){const n=byId.get(drag.id);drag.nx=n.x;drag.ny=n.y;}
+    svg.setPointerCapture(event.pointerId);svg.style.cursor='grabbing';
   });
-  svg.addEventListener('pointermove',event=>{if(!drag)return;const r=svg.getBoundingClientRect();const scale=880/r.width;panX=Math.max(-600,Math.min(600,drag.px+(event.clientX-drag.x)*scale));panY=Math.max(-440,Math.min(440,drag.py+(event.clientY-drag.y)*scale));transform();});
-  const finishDrag=()=>{drag=null;svg.style.cursor='';};svg.addEventListener('pointerup',finishDrag);svg.addEventListener('pointercancel',finishDrag);
-  document.querySelectorAll('[data-node]').forEach(el=>{el.addEventListener('click',()=>select(el.dataset.node));el.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();select(el.dataset.node);}});});
+  svg.addEventListener('pointermove',event=>{
+    if(!drag)return;
+    if(Math.hypot(event.clientX-drag.x,event.clientY-drag.y)<5&&!drag.moved)return;
+    drag.moved=true;
+    if(drag.id) {
+      const point=localPoint(event),n=byId.get(drag.id);
+      const next={x:Math.max(-600,Math.min(1800,drag.nx+point.x-drag.point.x)),y:Math.max(-600,Math.min(1480,drag.ny+point.y-drag.point.y))};
+      if(data.nodes.every(other=>other===n||Math.hypot(next.x-other.x,next.y-other.y)>((n.ring?12:25)+(other.ring?12:25)+38))) {
+        Object.assign(n,next);redrawNodes();
+      }
+    } else {
+      const p=new DOMPoint(event.clientX,event.clientY).matrixTransform(svg.getScreenCTM().inverse()),start=new DOMPoint(drag.x,drag.y).matrixTransform(svg.getScreenCTM().inverse());
+      panX=Math.max(-1800,Math.min(1800,drag.px+p.x-start.x));panY=Math.max(-1480,Math.min(1480,drag.py+p.y-start.y));transform();
+    }
+  });
+  const finishDrag=event=>{if(event.type==='pointerup'&&drag?.id&&!drag.moved)select(drag.id);suppressClick=!!drag?.moved;drag=null;svg.style.cursor='';if(svg.hasPointerCapture(event.pointerId))svg.releasePointerCapture(event.pointerId);setTimeout(()=>{suppressClick=false;},0);};svg.addEventListener('pointerup',finishDrag);svg.addEventListener('pointercancel',finishDrag);
+  svg.addEventListener('click',event=>{if(suppressClick){event.preventDefault();event.stopPropagation();return;}const node=event.target.closest('[data-node]');if(node)select(node.dataset.node);});
+  document.querySelectorAll('[data-node]').forEach(el=>{el.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();select(el.dataset.node);}});});
   document.querySelectorAll('[data-pick]').forEach(el=>el.addEventListener('click',()=>select(el.dataset.pick)));
   search.addEventListener('input',searchModules);
   search.addEventListener('keydown',event=>{if(event.key==='Escape'){search.value='';searchModules();}if(event.key==='Enter'){const node=data.nodes.find(n=>[n.label,n.module,n.purpose].join(' ').toLowerCase().includes(search.value.toLowerCase()));if(node)select(node.id);}});
@@ -62,14 +101,21 @@
     motion.textContent=reduced.matches?'Motion off · system setting':paused?'Resume motion':'Pause motion';
     motion.disabled=reduced.matches;motion.setAttribute('aria-pressed',String(paused));
     clearInterval(routeClock);
-    if(tracing&&!stop)routeClock=setInterval(()=>{routeStep=(routeStep+1)%data.route.length;select(data.route[routeStep]);},2200);
+    if(tracing&&!stop)routeClock=setInterval(()=>{routeStep=(routeStep+1)%data.route.length;showStep();},3200);
+  }
+  function showStep() {
+    const steps=['Choose the relevant project context.','Retrieve source-linked memory.','Pass focused context through MCP.','The assistant receives the context.'];
+    select(data.route[routeStep]);
+    document.getElementById('trace-status').textContent=`Step ${routeStep+1} of ${data.route.length}: ${steps[routeStep]} Illustrative public architecture only; no private query or model call.`;
   }
   motion.addEventListener('click',()=>{paused=!paused;updateMotion();});
+  traceNext.addEventListener('click',()=>{routeStep=(routeStep+1)%data.route.length;showStep();updateMotion();});
   trace.addEventListener('click',()=>{
-    tracing=!tracing;trace.setAttribute('aria-pressed',String(tracing));trace.textContent=tracing?'End trace':'Trace retrieval';
+    tracing=!tracing;trace.setAttribute('aria-pressed',String(tracing));trace.textContent=tracing?'End walkthrough':'How retrieval works';
+    traceNext.hidden=!tracing;
     svg.querySelectorAll('.edge').forEach(el=>{const s=data.route.indexOf(el.dataset.source),t=data.route.indexOf(el.dataset.target);el.classList.toggle('trace',tracing&&s>=0&&t===s+1);});
-    document.getElementById('trace-status').textContent=tracing?'Illustrative route: domain routing → scoped retrieval → MCP interface → compatible assistant. This is an explanation of source modules, not a recorded query or a model call.':'The graph is generated from a curated public module table. No personal corpus counts or query scores are shown.';
-    routeStep=0;if(tracing)select(data.route[0]);updateMotion();
+    document.getElementById('trace-status').textContent='The graph is generated from a curated public module table. No personal corpus counts or query scores are shown.';
+    routeStep=0;if(tracing)showStep();updateMotion();
   });
   reduced.addEventListener('change',updateMotion);document.addEventListener('visibilitychange',updateMotion);updateMotion();
 })();

@@ -21,6 +21,20 @@ for element in svg.iter():
     assert element.tag.split('}')[-1] not in {"script","foreignObject","use","image"},"Unsafe GitHub SVG element"
     for name,value in element.attrib.items():
         if name.endswith("href"): assert value.startswith('#'),"External SVG dependency"
+byid={n['id']:n for n in data['nodes']}
+for element in svg.iter():
+    if element.attrib.get('class')!='edge': continue
+    s,t=byid[element.attrib['data-source']],byid[element.attrib['data-target']]
+    values=list(map(float,re.findall(r'-?\d+(?:\.\d+)?',element.attrib['d'])))
+    sx,sy,cx,cy,tx,ty=values
+    # Endpoints terminate outside the membrane, rather than entering a soma.
+    for node,x,y in [(s,sx,sy),(t,tx,ty)]:
+        assert abs(((x-node['x'])**2+(y-node['y'])**2)**.5-((12 if node['ring'] else 25)+9))<.02,'Unclipped edge terminal'
+    for k in range(1,40):
+        f=k/40;x=(1-f)**2*sx+2*(1-f)*f*cx+f*f*tx;y=(1-f)**2*sy+2*(1-f)*f*cy+f*f*ty
+        for node in data['nodes']:
+            if node['id'] in (s['id'],t['id']):continue
+            assert ((x-node['x'])**2+(y-node['y'])**2)**.5>((12 if node['ring'] else 25)+7),'Wire crosses unrelated neuron'
 for filename in ["index.html","neural-map.html","architecture.json","neural-map.svg"]:
     text=(root/filename).read_text(encoding="utf-8")
     assert not re.search(r'(?:src|href)=["\'](?:brain\.json|pages/)',text),"Legacy export dependency"

@@ -22,7 +22,7 @@ async function closePage(page){
  const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'});
  try{
   for(const [name,width,height] of [['desktop',1440,1100],['mobile',390,1000]]){
-   const page=await browser.newPage({viewport:{width,height}}),errors=[],requests=[],failedRequests=[];
+   const page=await browser.newPage({viewport:{width,height},hasTouch:name==='mobile'}),errors=[],requests=[],failedRequests=[];
    await withDeploymentHeaders(page);
    page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
    page.on('pageerror',e=>errors.push(e.message));page.on('requestfailed',r=>failedRequests.push({url:r.url(),error:r.failure()?.errorText}));page.on('request',r=>requests.push(r.url()));
@@ -48,7 +48,29 @@ async function closePage(page){
    await page.locator('#motion').click();assert(await page.locator('svg.paused').count()===1,'pause');
    await page.locator('#trace').click();assert(await page.locator('.edge.trace').count()===3,'trace real route edges');
    assert(await page.locator('#detail h3').textContent()==='Domain routing','trace stage selection');
+   assert((await page.locator('#trace-status').textContent()).includes('Step 1 of 4'),'visible walkthrough step');
+   await page.locator('#trace-next').click();assert(await page.locator('#detail h3').textContent()==='Scoped retrieval','manual walkthrough advances while motion paused');
    await page.locator('#trace').click();await page.locator('#motion').click();
+   await page.locator('#reset').click();
+   // A drag changes only this view, reroutes attached wires and never selects.
+   const node=page.locator('[data-node="repositories"]');
+   const somaPoint=()=>node.locator('.soma').evaluate(el=>{const p=new DOMPoint(Number(el.getAttribute('cx')),Number(el.getAttribute('cy'))).matrixTransform(el.getScreenCTM());return{x:p.x,y:p.y};});
+   await node.scrollIntoViewIfNeeded();const start=await somaPoint(),wire=page.locator('.edge[data-source="repositories"]'),originalWire=await wire.getAttribute('d');
+   await page.mouse.move(start.x,start.y);await page.mouse.down();await page.mouse.move(start.x-55,start.y+35,{steps:8});await page.mouse.up();
+   assert((await node.getAttribute('transform'))!=='translate(0 0)','neuron moves');
+   assert(await wire.getAttribute('d')!==originalWire,'edge reroutes after drag');
+   assert(await page.locator('.flow[data-source="repositories"]').getAttribute('d')===await wire.getAttribute('d'),'pulse follows updated edge');
+   assert(await page.locator('#detail h3').textContent()==='Memory is a system.','drag does not trigger selection');
+   await page.locator('#reset').click();assert(await wire.getAttribute('d')===originalWire,'reset restores exact original connection');
+   await node.scrollIntoViewIfNeeded();const tap=await somaPoint();
+   if(name==='mobile')await page.touchscreen.tap(tap.x,tap.y);else await page.mouse.click(tap.x,tap.y);
+   assert(await page.locator('#detail h3').textContent()==='Repository history','real pointer tap selects');
+   await page.locator('#reset').click();
+   // Pointer capture permits dragging beyond the old map edge; panning is not
+   // clamped to the previous 600/440 boundary. Reset remains an escape hatch.
+   await page.locator('.neural-svg').scrollIntoViewIfNeeded();const svgBox=await page.locator('.neural-svg').boundingBox();
+   await page.mouse.move(svgBox.x+5,svgBox.y+svgBox.height*.48);await page.mouse.down();await page.mouse.move(svgBox.x+5+svgBox.width*.8,svgBox.y+svgBox.height*.48,{steps:6});await page.mouse.up();
+   assert(Number((await page.locator('#network').getAttribute('transform')).match(/translate\(([-\d.]+)/)[1])>1200,'pan can pass previous horizontal edge '+await page.locator('#network').getAttribute('transform'));
    await page.locator('#reset').click();
    await page.locator('.neural-svg').scrollIntoViewIfNeeded();
    const box=await page.locator('.neural-svg').boundingBox();
@@ -66,6 +88,7 @@ async function closePage(page){
    await page.screenshot({path:path.join(out,name+'.png'),fullPage:true});
    await page.locator('#neural-map').screenshot({path:path.join(out,name+'-map.png')});
    await page.emulateMedia({reducedMotion:'reduce'});await page.waitForFunction(()=>document.getElementById('motion').disabled);assert(await page.locator('#motion').isDisabled(),'reduced motion button');
+   await page.locator('#trace').click();await page.locator('#trace-next').click();assert((await page.locator('#trace-status').textContent()).includes('Step 2 of 4'),'walkthrough accessible with reduced motion');await page.locator('#trace').click();
    assert(await page.locator('.flow').first().evaluate(e=>getComputedStyle(e).animationName)==='none','reduced motion removes animation');
    await page.screenshot({path:path.join(out,name+'-reduced.png'),fullPage:true});
    await page.unrouteAll({behavior:'wait'});

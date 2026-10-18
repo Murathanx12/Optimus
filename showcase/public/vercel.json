@@ -20,7 +20,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'sha256-MIhGS8DFqKNRn6Z87q9Z+lYd5cTiPTr1Dr0f8jyJqzQ='; style-src 'self' 'unsafe-inline'; img-src 'self'; frame-ancestors 'self' https://murathan.info https://www.murathan.info; base-uri 'self'; object-src 'none'"
+          "value": "default-src 'self'; script-src 'self' 'sha256-fHW1oaeiDu+ACJEeIwOWlvIi9HjeGI9uyBhQiOunWsw='; style-src 'self' 'unsafe-inline'; img-src 'self'; frame-ancestors 'self' https://murathan.info https://www.murathan.info; base-uri 'self'; object-src 'none'"
         }
       ]
     }

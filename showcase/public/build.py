@@ -63,14 +63,39 @@ def graph() -> dict:
                           x=round(600 + radius * math.cos(a), 2), y=round(440 + radius * math.sin(a), 2), angle=angle))
     return dict(kind="curated-public-module-architecture", version=1, sectors=SECTORS,
                 nodes=nodes, edges=[dict(source=s, target=t, relation=r) for s,t,r in EDGES],
-                route=["domains", "query", "mcp", "client"], route_label="Illustrative retrieval path, not a recorded query")
+                route=["domains", "query", "mcp", "client"], route_label="Illustrative walkthrough: choose context, retrieve sources, serve the assistant")
+
+def edge_path(s: dict, t: dict, nodes: list) -> str:
+    """Declared curves with clipped terminals and deterministic soma clearance."""
+    dx, dy = t["x"]-s["x"], t["y"]-s["y"]
+    best = None
+    for bend in [.12, -.12, .28, -.28, .46, -.46, .7, -.7]:
+        cx, cy = (s["x"]+t["x"])/2-dy*bend, (s["y"]+t["y"])/2+dx*bend
+        def endpoint(n, other):
+            vx,vy = other[0]-n["x"],other[1]-n["y"]
+            scale = ((25 if not n["ring"] else 12)+9)/max(1,math.hypot(vx,vy))
+            return n["x"]+vx*scale,n["y"]+vy*scale
+        start,end = endpoint(s,(cx,cy)),endpoint(t,(cx,cy))
+        penalty = abs(bend)*.01
+        for k in range(1,40):
+            f=k/40
+            x=(1-f)**2*start[0]+2*(1-f)*f*cx+f*f*end[0]
+            y=(1-f)**2*start[1]+2*(1-f)*f*cy+f*f*end[1]
+            for n in nodes:
+                if n["id"] in (s["id"],t["id"]): continue
+                clearance=(25 if not n["ring"] else 12)+20
+                penalty += max(0,clearance-math.hypot(x-n["x"],y-n["y"]))**2
+        candidate=(penalty,start,end,cx,cy)
+        if best is None or penalty<best[0]: best=candidate
+    _,start,end,cx,cy=best
+    return f'M{start[0]:.2f},{start[1]:.2f}Q{cx:.2f},{cy:.2f} {end[0]:.2f},{end[1]:.2f}'
 
 def svg(data: dict, interactive: bool = False) -> str:
     esc = html.escape
     byid = {n["id"]: n for n in data["nodes"]}
     parts = ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="160 40 880 800" role="img" aria-labelledby="neural-title neural-desc" class="neural-svg">',
       '<title id="neural-title">Optimus neural architecture</title><desc id="neural-desc">A curated map of public modules: capture, durable memory, scoped retrieval and learning. Blue signals travel along module relationships. This is not a private knowledge export.</desc>',
-      '<style>text{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}.label{fill:#fff;font-size:15px}.meta{fill:#aaa;font-size:11px;letter-spacing:2px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}.edge{fill:none;stroke:#fff;stroke-opacity:.14;stroke-width:1.2}.flow{fill:none;stroke:#6fb0ff;stroke-width:2;stroke-dasharray:3 42;animation:current 9s linear infinite}.soma{fill:#000;stroke:#fff;stroke-opacity:.75;stroke-width:1.3}.membrane{fill:none;stroke:#fff;stroke-opacity:.16}.bead{fill:#fff;fill-opacity:.6}.dendrite{fill:none;stroke:#fff;stroke-opacity:.25}.sector{fill:#aaa;font-size:13px;letter-spacing:3px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}@keyframes current{to{stroke-dashoffset:-180}}@media(prefers-reduced-motion:reduce){.flow{animation:none;stroke-dasharray:none;stroke-opacity:.28}}.paused .flow{animation-play-state:paused}.node{cursor:pointer}.node.selected .soma,.node:focus .soma{stroke:#6fb0ff;fill:#000}.node.selected .label{fill:#6fb0ff}.edge.trace{stroke:#ff8a1f;stroke-opacity:.85;stroke-width:2}.node.dim{opacity:.18}</style>',
+      '<style>text{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}.label{fill:#fff;font-size:15px;paint-order:stroke fill;stroke:#000;stroke-width:6px;stroke-linejoin:round}.meta{fill:#aaa;font-size:11px;letter-spacing:2px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}.edge{fill:none;stroke:#fff;stroke-opacity:.14;stroke-width:1.2}.flow{fill:none;stroke:#6fb0ff;stroke-width:2;stroke-dasharray:3 42;animation:current 9s linear infinite}.soma{fill:#000;stroke:#fff;stroke-opacity:.75;stroke-width:1.3}.membrane{fill:none;stroke:#fff;stroke-opacity:.16}.bead{fill:#fff;fill-opacity:.6}.dendrite{fill:none;stroke:#fff;stroke-opacity:.25}.sector{fill:#aaa;font-size:13px;letter-spacing:3px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}@keyframes current{to{stroke-dashoffset:-180}}@media(prefers-reduced-motion:reduce){.flow{animation:none;stroke-dasharray:none;stroke-opacity:.28}}.paused .flow{animation-play-state:paused}.node{cursor:pointer}.node.selected .soma,.node:focus .soma{stroke:#6fb0ff;fill:#000}.node.selected .label{fill:#6fb0ff}.edge.trace{stroke:#ff8a1f;stroke-opacity:.85;stroke-width:2}.node.dim{opacity:.18}</style>',
       '<rect width="1200" height="880" fill="#000"/><g id="network">']
     for radius in [118, 220, 322]:
         parts.append(f'<circle cx="600" cy="440" r="{radius}" fill="none" stroke="#fff" stroke-opacity=".08" stroke-dasharray="2 9"/>')
@@ -80,10 +105,8 @@ def svg(data: dict, interactive: bool = False) -> str:
         parts.append(f'<text class="sector" text-anchor="middle" x="{x:.2f}" y="{y:.2f}">{label.upper()}</text>')
     for i, edge in enumerate(data["edges"]):
         s,t = byid[edge["source"]], byid[edge["target"]]
-        mx,my = (s["x"]+t["x"])/2,(s["y"]+t["y"])/2
-        dx,dy = t["x"]-s["x"],t["y"]-s["y"]
-        path = f'M{s["x"]},{s["y"]}Q{mx-dy*.12:.2f},{my+dx*.12:.2f} {t["x"]},{t["y"]}'
-        parts.append(f'<path class="edge" data-source="{s["id"]}" data-target="{t["id"]}" d="{path}"/><path class="flow" style="animation-delay:-{i*.47:.2f}s" d="{path}"/>')
+        path = edge_path(s,t,data["nodes"])
+        parts.append(f'<path class="edge" data-source="{s["id"]}" data-target="{t["id"]}" d="{path}"/><path class="flow" data-source="{s["id"]}" data-target="{t["id"]}" style="animation-delay:-{i*.47:.2f}s" d="{path}"/>')
     for n in data["nodes"]:
         a,x,y = math.radians(n["angle"]),n["x"],n["y"]
         radius = 12 if n["ring"] else 25

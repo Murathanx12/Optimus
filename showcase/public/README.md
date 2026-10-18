@@ -15,6 +15,6 @@ The neural graph is a curated architecture of public source modules. It does not
 node showcase/public/verify.cjs
 ```
 
-The browser verifier expects this directory served at `http://127.0.0.1:8895` (or set `SHOWCASE_URL`). It checks module selection, search including no-match, keyboard operation, zoom/pan/reset, route tracing, pause and reduced motion; it captures desktop, mobile, an opaque-origin sandbox embed, three GitHub-style SVG frames and a DejaVu font frame. Screenshots stay in ignored `validation/`.
+The browser verifier expects this directory served at `http://127.0.0.1:8895` (or set `SHOWCASE_URL`). It checks module selection, search including no-match, keyboard operation, direct neuron drag without selection, clipped/rerouted wires, expanded zoom/pan/reset, stepped walkthrough, pause and reduced motion; it captures desktop, mobile, an opaque-origin sandbox embed, three GitHub-style SVG frames and a DejaVu font frame. Screenshots stay in ignored `validation/`.
 
 Before publishing, verify link destinations and keep previous generated brain exports outside this deployment. The generated CSP permits external script only from this site, plus the exact hash of the standalone embed script; inline styles support the GitHub-safe SVG.

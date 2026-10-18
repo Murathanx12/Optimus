@@ -117,7 +117,7 @@ def main() -> None:
     js = (OUT / "script.js").read_text(encoding="utf-8")
     embed = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Optimus neural architecture</title><style>'+css+'body.embed main{padding:20px;max-width:1440px}body.embed section{margin-top:0}body.embed .section-head h2{font-size:22px}</style></head><body class="embed"><main>'+embed_section+'</main><script type="application/json" id="architecture-data">'+serialized+'</script><script>'+js+'</script></body></html>\n'
     script_hash=base64.b64encode(hashlib.sha256(js.encode("utf-8")).digest()).decode("ascii")
-    headers={"cleanUrls":True,"headers":[{"source":"/(.*)","headers":[
+    headers={"cleanUrls":True,"rewrites":[{"source":"/favicon.ico","destination":"/mark.svg"}],"headers":[{"source":"/(.*)","headers":[
       {"key":"X-Content-Type-Options","value":"nosniff"},
       {"key":"Referrer-Policy","value":"strict-origin-when-cross-origin"},
       {"key":"Content-Security-Policy","value":f"default-src 'self'; script-src 'self' 'sha256-{script_hash}'; style-src 'self' 'unsafe-inline'; img-src 'self'; frame-ancestors 'self' https://murathan.info https://www.murathan.info; base-uri 'self'; object-src 'none'"}]}]}

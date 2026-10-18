@@ -1,5 +1,11 @@
 {
   "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/favicon.ico",
+      "destination": "/mark.svg"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

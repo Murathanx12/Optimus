@@ -134,6 +134,9 @@
   document.querySelectorAll('[data-pick]').forEach(el=>el.addEventListener('click',()=>select(el.dataset.pick)));
   search.addEventListener('input',searchModules);
   search.addEventListener('keydown',event=>{if(event.key==='Escape'){search.value='';searchModules();}if(event.key==='Enter'){const node=data.nodes.find(n=>[n.label,n.module,n.purpose].join(' ').toLowerCase().includes(search.value.toLowerCase()));if(node)select(node.id);}});
+  // Keyboard events do not cross an iframe boundary. A hosting project dialog
+  // may accept this narrow signal after checking this frame's source window.
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&window.parent!==window)window.parent.postMessage({type:'optimus-map-escape'},'*');});
   function updateMotion() {
     const stop=paused||reduced.matches||document.hidden;
     if((reduced.matches||document.hidden)&&geometryFrame){cancelAnimationFrame(geometryFrame);drawConnections(performance.now());}

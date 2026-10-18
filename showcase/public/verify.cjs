@@ -118,6 +118,10 @@ async function closePage(page){
   await embed.setContent(`<iframe sandbox="allow-scripts" style="width:1060px;height:960px" src="${base}/neural-map.html"></iframe>`);
   const frame=embed.frameLocator('iframe');await frame.locator('[data-node="query"]').dispatchEvent('click');
   assert(await frame.locator('#detail h3').textContent()==='Scoped retrieval','opaque-origin sandbox embed works');assert(!embedErrors.length,'embed errors');
+  await embed.evaluate(()=>{window.escapeSignals=0;addEventListener('message',event=>{if(event.source===document.querySelector('iframe').contentWindow&&event.data?.type==='optimus-map-escape'&&Object.keys(event.data).length===1)escapeSignals++;});});
+  await frame.locator('#search').fill('sources');await frame.locator('#search').press('Escape');
+  await embed.waitForFunction(()=>window.escapeSignals===1);
+  assert(await frame.locator('#search').inputValue()==='','search Escape still clears inside iframe');
   await embed.screenshot({path:path.join(out,'sandbox-embed.png')});await closePage(embed);
   console.log(JSON.stringify({svgFrames:3,dejaVu:true,sandboxEmbed:true,embedErrors}));
  }finally{

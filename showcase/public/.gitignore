@@ -1,0 +1,6 @@
+.vercel/
+validation/
+__pycache__/
+
+.vercel
+.env*

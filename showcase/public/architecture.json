@@ -1,0 +1,395 @@
+{
+  "kind": "curated-public-module-architecture",
+  "version": 1,
+  "sectors": [
+    "Capture",
+    "Memory",
+    "Retrieval",
+    "Learning"
+  ],
+  "nodes": [
+    {
+      "id": "context",
+      "label": "DURABLE CONTEXT",
+      "sector": -1,
+      "ring": 0,
+      "module": "core/store.py",
+      "purpose": "Readable memory survives a conversation. Markdown is the source of truth; SQLite is its rebuildable search index.",
+      "capabilities": [
+        "Readable pages",
+        "Rebuildable index",
+        "Source references"
+      ],
+      "href": "https://github.com/Murathanx12/Optimus/blob/main/core/store.py",
+      "x": 600.0,
+      "y": 440.0,
+      "angle": 0
+    },
+    {
+      "id": "repositories",
+      "label": "Repository history",
+      "sector": 0,
+      "ring": 3,
+      "module": "core/ingest.py",
+      "purpose": "Repository ingestion preserves selected project structure and history. It does not imply every document has been read.",
+      "capabilities": [
+        "Structure",
+        "History",
+        "Project scope"
+      ],
+      "href": "https://github.com/Murathanx12/Optimus/blob/main/core/ingest.py",
+      "x": 321.14,
+      "y": 279.0,
+      "angle": -150.0
+    },
+    {
+      "id": "notes",
+      "label": "Selected notes",
+      "sector": 0,
+      "ring": 3,
+      "module": "core/ingest.py",
+      "purpose": "Explicit notes ingestion preserves selected Markdown text and source metadata. The operator chooses the material to ingest.",
+      "capabilities": [
+        "Selected text",
+        "Source metadata"
+      ],
+      "href": "https://github.com/Murathanx12/Optimus/blob/main/core/ingest.py",
+      "x": 439.0,
+      "y": 161.14,
+      "angle": -120.0
+    },
+    {
+      "id": "ingest",
+      "label": "Ingestion",
+      "sector": 0,
+      "ring": 2,
+      "module": "core/ingest.py",
+      "purpose": "Ingestion converts supported inputs into project-scoped memory pages with source references.",
+      "capabilities": [
+        "Source selection",
+        "Stable records",
+        "Project scope"
+      ],
+      "href": "https://github.com/Murathanx12/Optimus/blob/main/core/ingest.py",
+      "x": 444.44,
+      "y": 284.44,
+      "angle": -135.0
+    },
+    {
+      "id": "schema",
+      "label": "Page + claim schema",
+      "sector": 0,
+      "ring": 1,
+      "module": "core/schema.py",
+      "purpose": "Page and claim models carry tiers, aliases, status and source information. A stored claim is a recorded assertion requiring source checks, not automatic truth.",
+      "capabilities": [
+        "Tiers",
+        "Aliases",
+        "Claim provenance"
+      ],
+      "href": "https://github.com/Murathanx12/Optimus/blob/main/core/schema.py",
+      "x": 516.56,
+      "y": 356.56,
+      "angle": -135.0
+    },
+    {
+      "id": "markdown",
+      "label": "Markdown pages",
+      "sector": 1,
+      "ring": 3,
+      "module": "core/store.py",
+      "purpose": "Plain Markdown files retain readable memory. They can be inspected independently of a particular assistant.",
+      "capabilities": [
+        "Readable files",
+        "Source of truth",
+        "Portable context"
+      ],
+      "href": "https://github.com/Murathanx12/Optimus/blob/main/core/store.py",
+      "x": 827.69,
+      "y": 212.31,
+      "angle": -45.0
+    },
+    {
+      "id": "store",
+      "label": "Memory store",
+      "sector": 1,
+      "ring": 2,
+      "module": "core/store.py",
+      "purpose": "The store writes and reads pages, records relationships and events, and derives the SQLite index.",
+      "capabilities": [
+        "Page records",
+        "Relationships",
+        "Event ledger"
+      ],
+      "href": "https://github.com/Murathanx12/Optimus/blob/main/core/store.py",
+      "x": 710.0,
+      "y": 249.47,
+      "angle": -60.0
+    },
+    {
+      "id": "index",
+      "label": "SQLite index",
+      "sector": 1,
+      "ring": 1,
+      "module": "core/store.py",
+      "purpose": "A derived index supplies page, claim and alias lookup. Reindexing rebuilds it from Markdown pages.",
+      "capabilities": [
+        "Lookup",
+        "Aliases",
+        "Reindexing"
+      ],
+      "href": "https://github.com/Murathanx12/Optimus/blob/main/core/store.py",
+      "x": 683.44,
+      "y": 356.56,
+      "angle": -45.0
+    },
+    {
+      "id": "sources",
+      "label": "Source spans",
+      "sector": 1,
+      "ring": 2,
+      "module": "core/schema.py",
+      "purpose": "Sources connect remembered statements to the material from which they were recorded. Missing or stale evidence stays a review concern.",
+      "capabilities": [
+        "Source paths",
+        "Spans",
+        "Version context"
+      ],
+      "href": "https://github.com/Murathanx12/Optimus/blob/main/core/schema.py",
+      "x": 790.53,
+      "y": 330.0,
+      "angle": -30.0
+    },
+    {
+      "id": "client",
+      "label": "AI assistants",
+      "sector": 2,
+      "ring": 3,
+      "module": "mcp/server.py",
+      "purpose": "Compatible assistants request focused context through local MCP tools. The public website has no connection to the private brain.",
+      "capabilities": [
+        "Local client",
+        "Focused context"
+      ],
+      "href": "https://github.com/Murathanx12/Optimus/blob/main/mcp/server.py",
+      "x": 827.69,
+      "y": 667.69,
+      "angle": 45.0
+    },
+    {
+      "id": "mcp",
+      "label": "MCP interface",
+      "sector": 2,
+      "ring": 2,
+      "module": "mcp/server.py",
+      "purpose": "The local server exposes brain queries, session briefing and project-specific integrations. Tools depend on installation and configured services.",
+      "capabilities": [
+        "Brain query",
+        "Session briefing",
+        "Skill access"
+      ],
+      "href": "https://github.com/Murathanx12/Optimus/blob/main/mcp/server.py",
+      "x": 790.53,
+      "y": 550.0,
+      "angle": 30.0
+    },
+    {
+      "id": "query",
+      "label": "Scoped retrieval",
+      "sector": 2,
+      "ring": 1,
+      "module": "core/query.py",
+      "purpose": "Retrieval ranks relevant memory and returns source citations. A relevance floor can produce an explicit no-match result.",
+      "capabilities": [
+        "Ranking",
+        "Citations",
+        "No-match result"
+      ],
+      "href": "https://github.com/Murathanx12/Optimus/blob/main/core/query.py",
+      "x": 683.44,
+      "y": 523.44,
+      "angle": 45.0
+    },
+    {
+      "id": "domains",
+      "label": "Domain routing",
+      "sector": 2,
+      "ring": 2,
+      "module": "core/domains.py",
+      "purpose": "Domain rules guide a question toward relevant project scopes rather than treating all stored context as interchangeable.",
+      "capabilities": [
+        "Aliases",
+        "Domain filters",
+        "Project context"
+      ],
+      "href": "https://github.com/Murathanx12/Optimus/blob/main/core/domains.py",
+      "x": 710.0,
+      "y": 630.53,
+      "angle": 60.0
+    },
+    {
+      "id": "skills",
+      "label": "Reusable skills",
+      "sector": 3,
+      "ring": 3,
+      "module": "mcp/server.py",
+      "purpose": "The skill interface lets an assistant inspect project instructions. A skill needs to be discovered and read before it can guide the next task.",
+      "capabilities": [
+        "Discovery",
+        "Instructions",
+        "Reuse"
+      ],
+      "href": "https://github.com/Murathanx12/Optimus/blob/main/mcp/server.py",
+      "x": 372.31,
+      "y": 667.69,
+      "angle": 135.0
+    },
+    {
+      "id": "audit",
+      "label": "Source audit",
+      "sector": 3,
+      "ring": 2,
+      "module": "core/audit.py",
+      "purpose": "Audit checks detect memory whose source has drifted. A finding is a reason to inspect the source, not proof the stored statement is false.",
+      "capabilities": [
+        "Source drift",
+        "Review findings"
+      ],
+      "href": "https://github.com/Murathanx12/Optimus/blob/main/core/audit.py",
+      "x": 490.0,
+      "y": 630.53,
+      "angle": 120.0
+    },
+    {
+      "id": "deprecate",
+      "label": "Deprecation",
+      "sector": 3,
+      "ring": 1,
+      "module": "core/deprecate.py",
+      "purpose": "Deprecation records obsolete context and tombstones so later ingestion does not silently revive it.",
+      "capabilities": [
+        "Tombstones",
+        "Obsolete context"
+      ],
+      "href": "https://github.com/Murathanx12/Optimus/blob/main/core/deprecate.py",
+      "x": 516.56,
+      "y": 523.44,
+      "angle": 135.0
+    },
+    {
+      "id": "distill",
+      "label": "Distillation",
+      "sector": 3,
+      "ring": 2,
+      "module": "core/distill.py",
+      "purpose": "Distillation proposes a smaller set of memory updates from selected context. It is distinct from training a new foundation model.",
+      "capabilities": [
+        "Selected context",
+        "Proposed updates"
+      ],
+      "href": "https://github.com/Murathanx12/Optimus/blob/main/core/distill.py",
+      "x": 409.47,
+      "y": 550.0,
+      "angle": 150.0
+    }
+  ],
+  "edges": [
+    {
+      "source": "repositories",
+      "target": "ingest",
+      "relation": "records structure and history"
+    },
+    {
+      "source": "notes",
+      "target": "ingest",
+      "relation": "supplies selected text"
+    },
+    {
+      "source": "ingest",
+      "target": "schema",
+      "relation": "creates typed records"
+    },
+    {
+      "source": "schema",
+      "target": "store",
+      "relation": "defines stored pages and claims"
+    },
+    {
+      "source": "store",
+      "target": "markdown",
+      "relation": "preserves readable pages"
+    },
+    {
+      "source": "store",
+      "target": "index",
+      "relation": "derives searchable records"
+    },
+    {
+      "source": "store",
+      "target": "sources",
+      "relation": "retains source metadata"
+    },
+    {
+      "source": "store",
+      "target": "context",
+      "relation": "persists project context"
+    },
+    {
+      "source": "index",
+      "target": "query",
+      "relation": "supplies indexed candidates"
+    },
+    {
+      "source": "domains",
+      "target": "query",
+      "relation": "guides scoped retrieval"
+    },
+    {
+      "source": "query",
+      "target": "mcp",
+      "relation": "returns source-linked context"
+    },
+    {
+      "source": "mcp",
+      "target": "client",
+      "relation": "serves compatible assistants"
+    },
+    {
+      "source": "skills",
+      "target": "mcp",
+      "relation": "exposes reusable instructions"
+    },
+    {
+      "source": "audit",
+      "target": "sources",
+      "relation": "checks source drift"
+    },
+    {
+      "source": "deprecate",
+      "target": "store",
+      "relation": "marks obsolete context"
+    },
+    {
+      "source": "distill",
+      "target": "store",
+      "relation": "proposes memory updates"
+    },
+    {
+      "source": "context",
+      "target": "query",
+      "relation": "makes retained context available"
+    },
+    {
+      "source": "audit",
+      "target": "deprecate",
+      "relation": "informs review of stale context"
+    }
+  ],
+  "route": [
+    "domains",
+    "query",
+    "mcp",
+    "client"
+  ],
+  "route_label": "Illustrative retrieval path, not a recorded query"
+}

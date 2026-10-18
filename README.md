@@ -1,12 +1,18 @@
 # Optimus
 
-**Context that survives the conversation.**
+**Connected memory. Continuity by design.**
 
-Optimus is a portable memory and tool layer for AI assistants, built by [Murathan Abdullaev](https://murathan.info). It keeps project context in readable Markdown, indexes it with SQLite, and exposes focused retrieval tools through MCP.
+Optimus is an ongoing exploration of portable memory and tools for AI assistants. It keeps project context in readable Markdown, indexes it with SQLite, and exposes focused retrieval tools through MCP. The aim is to make useful research, decisions and procedures available beyond the conversation in which they were created.
 
 [Explore the public showcase](https://optimus-brain-alpha.vercel.app) · [Murathan's portfolio](https://murathan.info) · [Aegis Finance showcase](https://github.com/Murathanx12/AEGIS-FINANCE-SHOWCASE)
 
 This is an independent project under active development. Optimus supplies context and procedures to a reasoning model; it is not a newly trained language model. The public engine is separate from the owner's private brain, conversations and research archive.
+
+[![Optimus neural architecture: capture, memory, retrieval and learning](showcase/public/neural-map.svg)](https://optimus-brain-alpha.vercel.app/#neural-map)
+
+The interactive [neural map](https://optimus-brain-alpha.vercel.app/#neural-map) follows the project's original orbit / blackline visual language: white structure, blue information flow and orange retrieval. Neurons represent public modules; connections describe their architectural relationships. This is a curated architecture map, rather than an export of private knowledge or a measured query replay.
+
+Select a neuron to inspect its purpose and source. Search, zoom, pan or trace the illustrative retrieval route. Motion can be paused and respects the system's reduced-motion setting.
 
 ## What it does
 
@@ -16,16 +22,7 @@ This is an independent project under active development. Optimus supplies contex
 - **Serves assistants through MCP:** a local client can retrieve context and inspect historical project skills without copying the entire corpus into every prompt.
 - **Works with a research companion:** durable collection state, original attachments, parsing status, coverage reports and bounded evidence reads live in a separate worker.
 
-```mermaid
-flowchart LR
-  S[Repositories and selected notes] --> M[Markdown source pages]
-  M --> I[Derived SQLite index]
-  I --> Q[Scoped retrieval]
-  Q --> MCP[Local MCP server]
-  MCP --> A[Compatible AI assistant]
-  R[Research companion] --> E[Evidence and run ledger]
-  E --> A
-```
+Repository history and selected notes feed typed memory pages. The store retains source relationships and derives a searchable index. Domain routing and retrieval return relevant context through MCP. Audits and deprecation help flag stale or obsolete material; reusable skills give the next session procedures to follow.
 
 Markdown is the memory source of truth; the SQLite search index is rebuildable. The research companion maintains its own task ledger and original evidence archive.
 
@@ -56,7 +53,7 @@ Repository ingestion produces structural and history context; it does not mean t
 
 The checked local installation on 18 October 2026 has two servers: **7 core tools** here and **17 research tools** in the separate companion. Counts describe that installation and may change.
 
-For a compatible local Codex or ChatGPT desktop client, register the engine in `~/.codex/config.toml` using your own absolute paths:
+For a local Codex client, register the engine in `~/.codex/config.toml` using your own absolute paths. Other MCP clients have their own configuration:
 
 ```toml
 [mcp_servers.optimus]

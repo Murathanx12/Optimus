@@ -2,3 +2,6 @@ validation/
 README.md
 DESIGN.md
 verify.cjs
+build.py
+check.py
+index.template.html

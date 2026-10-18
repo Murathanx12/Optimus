@@ -52,7 +52,17 @@ body.embed main{padding:20px;max-width:1440px}body.embed section{margin-top:0}bo
     document.getElementById('search-status').textContent=q ? matches.size+' matching modules. Select a highlighted neuron or open the module directory.' : '';
   }
   function transform() { network.setAttribute('transform',`translate(${600+panX} ${440+panY}) scale(${zoom}) translate(-600 -440)`); }
-  function edgePath(s,t) {
+  // Keep each wire and its running current in place. Only the curve geometry
+  // changes: obstacle avoidance can choose a new bend without snapping routes.
+  const wires = [...svg.querySelectorAll('.edge')].map(edge => {
+    const source=byId.get(edge.dataset.source),target=byId.get(edge.dataset.target);
+    const values=edge.getAttribute('d').match(/-?\d+(?:\.\d+)?/g).map(Number);
+    const dx=target.x-source.x,dy=target.y-source.y;
+    const bend=((values[3]-(source.y+target.y)/2)*dx-(values[2]-(source.x+target.x)/2)*dy)/(dx*dx+dy*dy);
+    return {source,target,edge,flow:svg.querySelector(`.flow[data-source="${source.id}"][data-target="${target.id}"]`),original:edge.getAttribute('d'),bend,targetBend:bend};
+  });
+  let geometryFrame=0,geometryTime=0,routesDirty=false;
+  function chooseBend(s,t) {
     const dx=t.x-s.x,dy=t.y-s.y;
     let best;
     for(const bend of [.12,-.12,.28,-.28,.46,-.46,.7,-.7]) {
@@ -62,19 +72,48 @@ body.embed main{padding:20px;max-width:1440px}body.embed section{margin-top:0}bo
       for(let k=1;k<40;k++) {const f=k/40,x=(1-f)**2*start.x+2*(1-f)*f*cx+f*f*end.x,y=(1-f)**2*start.y+2*(1-f)*f*cy+f*f*end.y;
         data.nodes.forEach(n=>{if(n.id!==s.id&&n.id!==t.id)penalty+=Math.max(0,(n.ring?12:25)+20-Math.hypot(x-n.x,y-n.y))**2;});
       }
-      if(!best||penalty<best.penalty)best={penalty,start,end,cx,cy};
+      if(!best||penalty<best.penalty)best={penalty,bend};
     }
-    const b=best;return `M${b.start.x.toFixed(2)},${b.start.y.toFixed(2)}Q${b.cx.toFixed(2)},${b.cy.toFixed(2)} ${b.end.x.toFixed(2)},${b.end.y.toFixed(2)}`;
+    return best.bend;
+  }
+  function wirePath(wire) {
+    const s=wire.source,t=wire.target,dx=t.x-s.x,dy=t.y-s.y;
+    const cx=(s.x+t.x)/2-dy*wire.bend,cy=(s.y+t.y)/2+dx*wire.bend;
+    const endpoint=n=>{const vx=cx-n.x,vy=cy-n.y,scale=((n.ring?12:25)+9)/Math.max(1,Math.hypot(vx,vy));return{x:n.x+vx*scale,y:n.y+vy*scale};};
+    const start=endpoint(s),end=endpoint(t);
+    return `M${start.x.toFixed(2)},${start.y.toFixed(2)}Q${cx.toFixed(2)},${cy.toFixed(2)} ${end.x.toFixed(2)},${end.y.toFixed(2)}`;
+  }
+  function drawConnections(now) {
+    geometryFrame=0;
+    if(routesDirty){wires.forEach(wire=>{wire.targetBend=chooseBend(wire.source,wire.target);});routesDirty=false;}
+    const direct=reduced.matches||document.hidden;
+    const mix=direct?1:1-Math.exp(-Math.min(32,geometryTime?now-geometryTime:16)/90);
+    geometryTime=now;let settling=false;
+    wires.forEach(wire=>{
+      wire.bend+=(wire.targetBend-wire.bend)*mix;
+      if(Math.abs(wire.targetBend-wire.bend)<.0001)wire.bend=wire.targetBend;else settling=true;
+      const path=wirePath(wire);wire.edge.setAttribute('d',path);wire.flow.setAttribute('d',path);
+    });
+    if(settling)geometryFrame=requestAnimationFrame(drawConnections);else geometryTime=0;
+  }
+  function restoreConnections() {
+    cancelAnimationFrame(geometryFrame);geometryFrame=geometryTime=0;routesDirty=false;
+    wires.forEach(wire=>{
+      wire.bend=wire.targetBend=chooseBend(wire.source,wire.target);
+      wire.edge.setAttribute('d',wire.original);wire.flow.setAttribute('d',wire.original);
+    });
   }
   function redrawNodes() {
     svg.querySelectorAll('[data-node]').forEach(el=>{const n=byId.get(el.dataset.node),start=initial.get(n.id);el.setAttribute('transform',`translate(${n.x-start.x} ${n.y-start.y})`);});
-    svg.querySelectorAll('.edge,.flow').forEach(el=>el.setAttribute('d',edgePath(byId.get(el.dataset.source),byId.get(el.dataset.target))));
+    routesDirty=true;
+    if(reduced.matches){cancelAnimationFrame(geometryFrame);drawConnections(performance.now());}
+    else if(!geometryFrame)geometryFrame=requestAnimationFrame(drawConnections);
   }
   function localPoint(event) { const p=new DOMPoint(event.clientX,event.clientY);return p.matrixTransform(network.getScreenCTM().inverse()); }
   const changeZoom = multiplier => { zoom=Math.max(.7,Math.min(2.4,zoom*multiplier));transform(); };
   document.getElementById('zoom-in').addEventListener('click',()=>changeZoom(1.2));
   document.getElementById('zoom-out').addEventListener('click',()=>changeZoom(1/1.2));
-  document.getElementById('reset').addEventListener('click',()=>{zoom=1;panX=panY=0;data.nodes.forEach(n=>Object.assign(n,initial.get(n.id)));redrawNodes();transform();search.value='';searchModules();select(null);});
+  document.getElementById('reset').addEventListener('click',()=>{zoom=1;panX=panY=0;data.nodes.forEach(n=>Object.assign(n,initial.get(n.id)));redrawNodes();restoreConnections();transform();search.value='';searchModules();select(null);});
   svg.addEventListener('pointerdown',event=>{
     if(event.button!==0)return;
     const node=event.target.closest('[data-node]'),point=localPoint(event);
@@ -105,6 +144,7 @@ body.embed main{padding:20px;max-width:1440px}body.embed section{margin-top:0}bo
   search.addEventListener('keydown',event=>{if(event.key==='Escape'){search.value='';searchModules();}if(event.key==='Enter'){const node=data.nodes.find(n=>[n.label,n.module,n.purpose].join(' ').toLowerCase().includes(search.value.toLowerCase()));if(node)select(node.id);}});
   function updateMotion() {
     const stop=paused||reduced.matches||document.hidden;
+    if((reduced.matches||document.hidden)&&geometryFrame){cancelAnimationFrame(geometryFrame);drawConnections(performance.now());}
     svg.classList.toggle('paused',stop);
     motion.textContent=reduced.matches?'Motion off · system setting':paused?'Resume motion':'Pause motion';
     motion.disabled=reduced.matches;motion.setAttribute('aria-pressed',String(paused));

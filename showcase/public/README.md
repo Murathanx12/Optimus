@@ -13,8 +13,11 @@ The neural graph is a curated architecture of public source modules. It does not
 .venv/Scripts/python.exe showcase/public/build.py --check
 .venv/Scripts/python.exe showcase/public/check.py
 node showcase/public/verify.cjs
+node showcase/public/verify-fluid.cjs
 ```
 
 The browser verifier expects this directory served at `http://127.0.0.1:8895` (or set `SHOWCASE_URL`). It checks module selection, search including no-match, keyboard operation, direct neuron drag without selection, clipped/rerouted wires, expanded zoom/pan/reset, stepped walkthrough, pause and reduced motion; it captures desktop, mobile, an opaque-origin sandbox embed, three GitHub-style SVG frames and a DejaVu font frame. Screenshots stay in ignored `validation/`.
+
+Dragging preserves the existing wire elements and their current animation phase. Attached terminals follow the neuron; route curvature eases between obstacle-avoidance choices instead of abruptly switching sides. The declared starting layout and graph relationships do not change. Reduced motion updates geometry directly, and reset restores the exact original paths. `verify-fluid.cjs` records a real pointer-driven route change frame by frame, checks intermediate shapes and DOM/animation continuity, then checks immediate reduced-motion response and exact reset. Its screenshot and motion receipt stay in ignored `validation/`.
 
 Before publishing, verify link destinations and keep previous generated brain exports outside this deployment. The generated CSP permits external script only from this site, plus the exact hash of the standalone embed script; inline styles support the GitHub-safe SVG.

@@ -38,6 +38,7 @@ from mcp.server.fastmcp import FastMCP  # noqa: E402 — installed SDK, see note
 
 from core.query import format_answer, retrieve  # noqa: E402
 from core.store import Store  # noqa: E402
+from core.task_skills import register as register_task_skills  # noqa: E402
 
 AEGIS_REPO = Path(os.getenv("AEGIS_REPO", r"C:\Users\mrthn\aegis-finance"))
 #: The competition/trading checkout. A SEPARATE repo with its own skills, its own
@@ -71,7 +72,7 @@ server = FastMCP(
     "optimus",
     instructions=(
         "Optimus: Murat's personal context layer and central brain for the "
-        "Aegis program. Read-only tools for Aegis Finance verified state "
+        "Aegis program. For task-scoped workflows start with task_skills(). Read-only tools for Aegis Finance verified state "
         "(live deploy), the experiment registry, guardrails/canon, session "
         "postmortems, discipline skills, and the Optimus brain corpus. "
         "START every Aegis session with session_briefing() (health + working "
@@ -373,6 +374,13 @@ def brain_query(
         close = getattr(store, "close", None)
         if close:
             close()
+
+
+register_task_skills(server, _OPTIMUS_ROOT, {
+    "finance": {"aegis": AEGIS_REPO / ".claude" / "skills",
+                "terminal": ALPHA_TERMINAL_REPO / ".claude" / "skills"},
+    "presentation": {"optimus": OPTIMUS_SKILLS},
+})
 
 
 if __name__ == "__main__":

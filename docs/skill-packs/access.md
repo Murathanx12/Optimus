@@ -10,4 +10,6 @@ Optimus serves the maintained Markdown directly from each configured directory. 
 
 For mixed directories, use a source object with `directory` and `skills` keys. For example, `{"directory":"/absolute/path/to/skills","skills":["literature-review"]}` includes just that procedure. If a configured folder disappears or a named skill moves, the catalog returns its label under `missing_sources` or `missing_entries`. A named read includes the resolved path and SHA-256 digest for the exact bytes served.
 
+For release checkouts that rotate, set a source's `release_receipt`, `checkout_parent` and `checkout_prefix`. Give the receipt and parent absolute local paths. On each request Optimus reads the receipt's `repo` and `generated_utc` and serves `.claude/skills` in the active checkout. The checkout must be a matching direct child of the configured parent. An unreadable receipt or a timestamp outside the last hour marks that source unavailable and gives the reason in `source_errors`. Other sources and guides in the pack stay accessible.
+
 For continuity, save the dated state of a task in `brain/projects/task-<pack>/handoff.md` through the owner's existing editor. Record the source revision, last observable result, pending decision and next verification. A subsequent session can request this entry by name. Keep private handoffs out of the public repository.

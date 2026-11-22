@@ -1,5 +1,6 @@
 import hashlib
 import json
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from core.task_skills import PAGE_SIZE, task_catalog
@@ -52,3 +53,26 @@ def test_guides_and_handoff(tmp_path):
     assert task_catalog(tmp_path, {}, "game-dev", "guide:handoff")["body"] == "verified place"
     assert "guide:handoff" not in task_catalog(tmp_path, {}, "cad")["entries"]
     assert "missing" in task_catalog(tmp_path, {"cad": {"missing": tmp_path / "absent"}}, "cad")["missing_sources"]
+
+
+def test_rotating_release_switches_and_refuses_stale_receipt(tmp_path):
+    brain = tmp_path / "brain"
+    brain.mkdir()
+    receipt = tmp_path / "status.json"
+    config = {"finance": {"active": {"release_receipt": str(receipt),
+              "checkout_parent": str(tmp_path), "checkout_prefix": "release-"}}}
+    (brain / "skill-access.json").write_text(json.dumps(config), encoding="utf-8")
+    now = datetime.now(timezone.utc)
+    for label in ("release-one", "release-two"):
+        checkout = tmp_path / label
+        skill = checkout / ".claude/skills/check/SKILL.md"
+        skill.parent.mkdir(parents=True)
+        skill.write_text(label, encoding="utf-8")
+        receipt.write_text(json.dumps({"generated_utc": now.isoformat(), "repo": str(checkout)}))
+        assert task_catalog(tmp_path, {}, "finance", "active:check")["body"] == label
+    for stamp, path in ((now - timedelta(hours=2), checkout), (now, tmp_path / "different")):
+        receipt.write_text(json.dumps({"generated_utc": stamp.isoformat(), "repo": str(path)}))
+        listing = task_catalog(tmp_path, {}, "finance")
+        assert listing["missing_sources"] == ["active"] and listing["source_errors"]["active"]
+        assert "guide:workflow" in listing["entries"]
+        assert "body" not in task_catalog(tmp_path, {}, "finance", "active:check")
